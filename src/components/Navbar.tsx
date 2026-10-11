@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import logo from '../assets/wallex-logo.png';
 
-interface NavLink {
+export interface NavLink {
   label: string;
   href: string;
+  badge?: number;
 }
 
 interface NavbarProps {
@@ -13,8 +14,11 @@ interface NavbarProps {
   links?: NavLink[];
 }
 
-// Solo secciones que existen hoy en la app. Cuando haya más, se pasan por props.
-const defaultLinks: NavLink[] = [{ label: 'Buscar vivienda', href: '#buscar' }];
+// Secciones de la app
+const defaultLinks: NavLink[] = [
+  { label: 'Buscar vivienda', href: '#buscar' },
+  { label: 'Comparador Lado a Lado', href: '#comparar' },
+];
 
 const focusRing =
   'focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2B1B17] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F8F5F0]';
@@ -45,7 +49,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const activeHref = links.find((l) => l.href === hash)?.href ?? (hash ? undefined : links[0]?.href);
 
   const linkClass = (href: string) =>
-    `px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${focusRing} ${
+    `px-3 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-1.5 ${focusRing} ${
       href === activeHref
         ? 'bg-[#2B1B17] text-white'
         : 'text-[#4A3E39] hover:bg-[#EAE4DC]'
@@ -64,7 +68,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header className="sticky top-0 z-40 bg-[#F8F5F0]/95 backdrop-blur border-b border-[#EAE4DC] text-[#2B1B17]">
       <nav aria-label="Principal" className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
-        <a href="#" className={`flex items-center gap-2 rounded-lg ${focusRing}`}>
+        <a href="#buscar" className={`flex items-center gap-2 rounded-lg ${focusRing}`}>
           <img src={logo} alt="" className="h-10 w-10" />
           <span className="text-xl font-bold tracking-tight">Wallex</span>
         </a>
@@ -79,7 +83,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                   aria-current={link.href === activeHref ? 'page' : undefined}
                   className={linkClass(link.href)}
                 >
-                  {link.label}
+                  <span>{link.label}</span>
+                  {link.badge !== undefined && link.badge > 0 && (
+                    <span
+                      className={`text-[10px] font-extrabold px-1.5 py-0.2 rounded-full ${
+                        link.href === activeHref
+                          ? 'bg-[#D9A76A] text-[#2B1B17]'
+                          : 'bg-[#2B1B17] text-white'
+                      }`}
+                    >
+                      {link.badge}
+                    </span>
+                  )}
                 </a>
               </li>
             ))}
@@ -135,7 +150,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                   aria-current={link.href === activeHref ? 'page' : undefined}
                   className={`block ${linkClass(link.href)} py-3`}
                 >
-                  {link.label}
+                  <span>{link.label}</span>
+                  {link.badge !== undefined && link.badge > 0 && (
+                    <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-[#2B1B17] text-white">
+                      {link.badge}
+                    </span>
+                  )}
                 </a>
               </li>
             ))}

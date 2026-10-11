@@ -1,8 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { AuthForm, SESSION_KEY } from './components/AuthForm';
 import { Footer } from './components/Footer';
 import { Navbar } from './components/Navbar';
+import type { NavLink } from './components/Navbar';
 import { PropertyPortal } from './components/PropertyPortal';
+import { PropertyComparer } from './components/PropertyComparer';
+import { INITIAL_PROPERTIES } from './data/mockProperties';
+import type { Property } from './types/property';
 
 interface SessionUser {
   email: string;
@@ -25,7 +29,19 @@ const readSession = (): SessionUser | null => {
 export default function App() {
   const [user, setUser] = useState<SessionUser | null>(readSession);
   const [authOpen, setAuthOpen] = useState(false);
+  const [currentHash, setCurrentHash] = useState(() => window.location.hash || '#buscar');
+  const [comparisonIds, setComparisonIds] = useState<string[]>(['1', '3']); // Inicialmente 2 propiedades (Chapinero Alto vs Cedritos)
+  const [contactingProperty, setContactingProperty] = useState<Property | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
+
+  // Escuchar cambios de hash para navegación (#buscar o #comparar)
+  useEffect(() => {
+    const onHashChange = () => {
+      setCurrentHash(window.location.hash || '#buscar');
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
 
   // Capa fija en vez de <dialog>: con showModal() Brave se cerraba al autocompletar el correo
   useEffect(() => {
@@ -54,20 +70,151 @@ export default function App() {
     setUser(null);
   };
 
+  // Gestión de comparación
+  const handleToggleComparison = (propertyId: string) => {
+    setComparisonIds((prev) => {
+      if (prev.includes(propertyId)) {
+        return prev.filter((id) => id !== propertyId);
+      }
+      if (prev.length >= 3) {
+        alert('Puedes comparar un máximo de 3 propiedades a la vez. Quita una para agregar otra.');
+        return prev;
+      }
+      return [...prev, propertyId];
+    });
+  };
+
+  const handleRemoveFromComparison = (id: string) => {
+    setComparisonIds((prev) => prev.filter((item) => item !== id));
+  };
+
+  const handleAddToComparison = (prop: Property) => {
+    setComparisonIds((prev) => {
+      if (prev.includes(prop.id)) return prev;
+      if (prev.length >= 3) {
+        alert('Puedes comparar hasta 3 propiedades. Quita una para agregar otra.');
+        return prev;
+      }
+      return [...prev, prop.id];
+    });
+  };
+
+  const handleReplaceComparison = (oldId: string, newProp: Property) => {
+    setComparisonIds((prev) => prev.map((id) => (id === oldId ? newProp.id : id)));
+  };
+
+  const comparedProperties = useMemo(() => {
+    return comparisonIds
+      .map((id) => INITIAL_PROPERTIES.find((p) => p.id === id))
+      .filter((p): p is Property => p !== undefined);
+  }, [comparisonIds]);
+
+  const navLinks: NavLink[] = [
+    { label: 'Buscar vivienda', href: '#buscar' },
+    {
+      label: 'Comparador Lado a Lado (US-06)',
+      href: '#comparar',
+      badge: comparisonIds.length,
+    },
+  ];
+
   return (
     <div className="min-h-screen flex flex-col bg-[#F8F5F0]">
-      <Navbar user={user} onLogout={handleLogout} onLoginClick={() => setAuthOpen(true)} />
+      <Navbar
+        user={user}
+        onLogout={handleLogout}
+        onLoginClick={() => setAuthOpen(true)}
+        links={navLinks}
+      />
 
-      <div id="buscar" className="flex-1 scroll-mt-16">
-        <PropertyPortal />
-      </div>
+      <main className="flex-1">
+        {currentHash === '#comparar' ? (
+          <PropertyComparer
+            properties={comparedProperties}
+            availableProperties={INITIAL_PROPERTIES}
+            onRemoveProperty={handleRemoveFromComparison}
+            onAddProperty={handleAddToComparison}
+            onReplaceProperty={handleReplaceComparison}
+            onContactProperty={(prop) => setContactingProperty(prop)}
+            onClose={() => {
+              window.location.hash = '#buscar';
+            }}
+          />
+        ) : (
+          <div id="buscar" className="scroll-mt-16">
+            <PropertyPortal
+              comparisonIds={comparisonIds}
+              onToggleComparison={handleToggleComparison}
+              onOpenComparer={() => {
+                window.location.hash = '#comparar';
+              }}
+              onContactProperty={(prop) => setContactingProperty(prop)}
+            />
+          </div>
+        )}
+      </main>
 
       <Footer />
 
+      {/* Modal KYC unificado para contacto */}
+      {contactingProperty && (
+        <div
+          onClick={(e) => e.target === e.currentTarget && setContactingProperty(null)}
+          className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 z-50"
+        >
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-[#EAE4DC] space-y-5 relative">
+            <button
+              type="button"
+              onClick={() => setContactingProperty(null)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg"
+            >
+              ✕
+            </button>
+
+            <div className="text-center space-y-2">
+              <div className="w-12 h-12 bg-[#F8F5F0] text-[#2B1B17] rounded-full flex items-center justify-center mx-auto text-xl font-bold">
+                🔒
+              </div>
+              <h3 className="text-xl font-bold text-[#2B1B17]">
+                Verificación KYC para Contactar
+              </h3>
+              <p className="text-xs text-[#6E615A]">
+                Para protegerte ante posibles fraudes y garantizar la seguridad del arrendador, Wallex valida tu identidad antes de compartir datos directos para{' '}
+                <strong className="text-[#2B1B17]">{contactingProperty.title}</strong> ({contactingProperty.location}).
+              </p>
+            </div>
+
+            <div className="space-y-3 bg-[#F8F5F0] p-4 rounded-2xl border border-[#EAE4DC] text-xs">
+              <div className="flex items-center gap-2 text-[#2B1B17] font-semibold">
+                <span className="text-emerald-600">✓</span> Cédula de Ciudadanía cargada
+              </div>
+              <div className="flex items-center gap-2 text-[#2B1B17] font-semibold">
+                <span className="text-emerald-600">✓</span> Verificación biométrica facial
+              </div>
+              <div className="flex items-center gap-2 text-[#2B1B17] font-semibold">
+                <span className="text-emerald-600">✓</span> Autorización Habeas Data (Ley 1581 de 2012)
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                alert(`¡Verificación KYC aprobada! Los datos de contacto directo de ${contactingProperty.ownerName} han sido enviados a tu correo registrado.`);
+                setContactingProperty(null);
+              }}
+              className="w-full bg-[#2B1B17] text-white font-bold py-3 rounded-xl hover:bg-[#4A3E39] transition-colors text-sm shadow-md"
+            >
+              Completar y Contactar Arrendador
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Auth */}
       {authOpen && (
         <div
           onClick={(e) => e.target === e.currentTarget && closeAuth()}
-          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
         >
           <div
             ref={modalRef}
