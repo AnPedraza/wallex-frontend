@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import type { Property } from '../types/property';
 import { INITIAL_PROPERTIES, formatCOP } from '../data/mockProperties';
+import { PropertyDetail } from './PropertyDetail';
+import type { Property as DetailProperty } from '../data/properties';
 
 interface PropertyPortalProps {
   comparisonIds?: string[];
@@ -19,6 +21,7 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
   const [maxPrice, setMaxPrice] = useState<number>(3000000);
   const [showKycModal, setShowKycModal] = useState<boolean>(false);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [detailProperty, setDetailProperty] = useState<DetailProperty | null>(null);
 
   // Filtrado de propiedades
   const filteredProperties = INITIAL_PROPERTIES.filter((p) => {
@@ -33,6 +36,14 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
       onContactProperty(property);
     } else {
       setShowKycModal(true);
+    }
+  };
+
+  const handleContactFromDetail = (property: DetailProperty) => {
+    setDetailProperty(null);
+    const matched = INITIAL_PROPERTIES.find((p) => p.id === property.id);
+    if (matched) {
+      handleContact(matched);
     }
   };
 
@@ -141,6 +152,25 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
               const isSelectedForCompare = comparisonIds.includes(property.id);
               const estTotalCost = property.price + property.adminFee + property.estimatedTransportMonthly;
 
+              // Propiedad adaptada para PropertyDetail si se abre
+              const detailCompatibleProp = {
+                ...property,
+                images: [property.image],
+                description: `${property.title} ubicado en ${property.location}. ${property.transitAccess}.`,
+                requiresCoSigner: property.requirements.guarantorRequired,
+                requirements: [
+                  {
+                    label: property.requirements.guarantorRequired ? 'Codeudor con finca raíz en Bogotá' : 'Sin codeudor con finca raíz',
+                    required: property.requirements.guarantorRequired,
+                    detail: property.requirements.notes,
+                  },
+                  {
+                    label: `Demostración de ingresos de ${property.requirements.minIncomeMultiplier}x el valor de arriendo`,
+                    required: true,
+                  },
+                ],
+              };
+
               return (
                 <div
                   key={property.id}
@@ -153,18 +183,26 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
                   {/* Imagen del Inmueble */}
                   <div>
                     <div className="relative h-48 w-full bg-gray-200">
-                      <img
-                        src={property.image}
-                        alt={property.title}
-                        className="w-full h-full object-cover"
-                      />
+                      <button
+                        type="button"
+                        onClick={() => setDetailProperty(detailCompatibleProp)}
+                        aria-label={`Ver ficha completa de ${property.title}`}
+                        className="block w-full h-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#2B1B17]"
+                      >
+                        <img
+                          src={property.image}
+                          alt={property.title}
+                          className="w-full h-full object-cover"
+                        />
+                      </button>
+
                       {property.verified && (
-                        <span className="absolute top-3 left-3 bg-[#2B1B17] text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                        <span className="absolute top-3 left-3 bg-[#2B1B17] text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider pointer-events-none">
                           Identidad Verificada
                         </span>
                       )}
                       {property.certified && (
-                        <span className="absolute top-3 right-3 bg-[#D9A76A] text-[#2B1B17] text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                        <span className="absolute top-3 right-3 bg-[#D9A76A] text-[#2B1B17] text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider pointer-events-none">
                           Certificado de Tradición
                         </span>
                       )}
@@ -198,7 +236,10 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
                         <span className="text-xs font-semibold text-[#8C5E3C]">
                           {property.location}
                         </span>
-                        <h3 className="text-lg font-bold text-[#2B1B17] mt-1">
+                        <h3
+                          onClick={() => setDetailProperty(detailCompatibleProp)}
+                          className="text-lg font-bold text-[#2B1B17] mt-1 cursor-pointer hover:underline"
+                        >
                           {property.title}
                         </h3>
                         <div className="text-2xl font-extrabold text-[#2B1B17] mt-2">
@@ -243,12 +284,19 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
                     </div>
                   </div>
 
-                  {/* Botón de Contacto KYC */}
-                  <div className="p-5 pt-0">
+                  {/* Botones de Acción */}
+                  <div className="p-5 pt-0 space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => setDetailProperty(detailCompatibleProp)}
+                      className="w-full bg-[#F8F5F0] hover:bg-[#EAE4DC] text-[#2B1B17] font-semibold py-2 rounded-xl transition-colors text-xs border border-[#EAE4DC]"
+                    >
+                      Ver Ficha Estandarizada
+                    </button>
                     <button
                       type="button"
                       onClick={() => handleContact(property)}
-                      className="w-full bg-[#2B1B17] text-white font-medium py-3 rounded-xl hover:bg-[#4A3E39] transition-colors text-sm"
+                      className="w-full bg-[#2B1B17] text-white font-medium py-2.5 rounded-xl hover:bg-[#4A3E39] transition-colors text-sm"
                     >
                       Contactar Propietario
                     </button>
@@ -291,6 +339,15 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal Ficha Estandarizada */}
+      {detailProperty && (
+        <PropertyDetail
+          property={detailProperty}
+          onClose={() => setDetailProperty(null)}
+          onContact={handleContactFromDetail}
+        />
       )}
 
       {/* Modal KYC de Verificación (Mockups 03 y 04) */}
