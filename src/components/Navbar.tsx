@@ -49,7 +49,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const activeHref = links.find((l) => l.href === hash)?.href ?? (hash ? undefined : links[0]?.href);
 
   const linkClass = (href: string) =>
-    `px-3 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-1.5 ${focusRing} ${
+    `px-3 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors flex items-center gap-1.5 ${focusRing} ${
       href === activeHref
         ? 'bg-[#2B1B17] text-white'
         : 'text-[#4A3E39] hover:bg-[#EAE4DC]'
@@ -74,7 +74,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         </a>
 
         {/* Escritorio */}
-        <div className="hidden md:flex items-center gap-6">
+        <div className="hidden lg:flex items-center gap-6">
           <ul className="flex items-center gap-1">
             {links.map((link) => (
               <li key={link.href}>
@@ -131,7 +131,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           aria-expanded={menuOpen}
           aria-controls="menu-movil"
           aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
-          className={`md:hidden w-11 h-11 flex items-center justify-center rounded-xl hover:bg-[#EAE4DC] ${focusRing}`}
+          className={`lg:hidden w-11 h-11 flex items-center justify-center rounded-xl hover:bg-[#EAE4DC] ${focusRing}`}
         >
           <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
             {menuOpen ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
@@ -140,7 +140,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       </nav>
 
       {menuOpen && (
-        <div id="menu-movil" className="md:hidden border-t border-[#EAE4DC] bg-[#F8F5F0] px-6 py-4 space-y-4">
+        <div id="menu-movil" className="lg:hidden border-t border-[#EAE4DC] bg-[#F8F5F0] px-6 py-4 space-y-4">
           <ul className="space-y-1">
             {links.map((link) => (
               <li key={link.href}>

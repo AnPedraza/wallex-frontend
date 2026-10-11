@@ -10,7 +10,10 @@ interface FooterProps {
   links?: FooterLink[];
 }
 
-const defaultLinks: FooterLink[] = [{ label: 'Buscar vivienda', href: '#buscar' }];
+const defaultLinks: FooterLink[] = [
+  { label: 'Buscar vivienda', href: '#buscar' },
+  { label: 'Comparador Lado a Lado', href: '#comparar' },
+];
 
 export const Footer: React.FC<FooterProps> = ({ links = defaultLinks }) => {
   return (
