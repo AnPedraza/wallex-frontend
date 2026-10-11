@@ -27,7 +27,7 @@ export const PropertyComparer: React.FC<PropertyComparerProps> = ({
 }) => {
   // Perfil de transporte seleccionado
   const [selectedProfileId, setSelectedProfileId] = useState<string>('standard');
-  const [customTransportDayRate, setCustomTransportDayRate] = useState<number>(6400); // 2 pasajes Bogotá ($3.200 c/u)
+  const [customTransportDayRate, setCustomTransportDayRate] = useState<number>(7100); // 2 pasajes TransMilenio ($3.550 c/u)
   const [commuteDaysPerMonth, setCommuteDaysPerMonth] = useState<number>(22);
   const [isCustomTransport, setIsCustomTransport] = useState<boolean>(false);
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
@@ -109,16 +109,11 @@ export const PropertyComparer: React.FC<PropertyComparerProps> = ({
               </button>
             )}
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-extrabold uppercase tracking-wider bg-[#2B1B17] text-white px-2 py-0.5 rounded-md">
-                  US-06
-                </span>
-                <h1 className="text-xl sm:text-2xl font-extrabold text-[#2B1B17] tracking-tight">
-                  Comparador Lado a Lado de Costo Total
-                </h1>
-              </div>
+              <h1 className="text-xl sm:text-2xl font-extrabold text-[#2B1B17] tracking-tight">
+                Comparador Lado a Lado de Costo Total
+              </h1>
               <p className="text-xs text-[#6E615A] mt-0.5 hidden sm:block">
-                Cálculo transparente de <strong>Arriendo + Administración + Transporte estimado en Bogotá</strong>
+                Cálculo transparente de <strong>Valor de arriendo + Cuota de administración + Transporte estimado en Bogotá</strong>
               </p>
             </div>
           </div>
@@ -161,13 +156,17 @@ export const PropertyComparer: React.FC<PropertyComparerProps> = ({
         {properties.length < 2 && (
           <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-6 text-amber-900 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <span className="text-3xl">⚖️</span>
+              <div className="w-10 h-10 rounded-xl bg-amber-200/80 flex items-center justify-center text-amber-900 shrink-0">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
               <div>
                 <h2 className="font-bold text-base text-amber-950">
                   Selecciona al menos 2 propiedades para comparar
                 </h2>
                 <p className="text-xs text-amber-800 mt-0.5">
-                  La historia US-06 requiere comparar lado a lado mínimo 2 alternativas para analizar el desglose financiero y requisitos.
+                  Wallex requiere comparar lado a lado mínimo 2 alternativas para analizar el desglose financiero y requisitos.
                 </p>
               </div>
             </div>
@@ -191,9 +190,13 @@ export const PropertyComparer: React.FC<PropertyComparerProps> = ({
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-[#F8F5F0] pb-3">
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-lg">🚌</span>
+                <div className="w-6 h-6 rounded-md bg-[#F8F5F0] flex items-center justify-center text-[#2B1B17]">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h8m-8 4h8m-4 8v-2m-6 2h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v11a2 2 0 002 2z" />
+                  </svg>
+                </div>
                 <h2 className="font-extrabold text-sm sm:text-base text-[#2B1B17]">
-                  Simulador de Movilidad y Transporte en Bogotá
+                  Simulador de Movilidad y Transporte en Bogotá (Tarifa TransMilenio: $3.550)
                 </h2>
               </div>
               <p className="text-xs text-[#6E615A] mt-0.5">
@@ -271,7 +274,7 @@ export const PropertyComparer: React.FC<PropertyComparerProps> = ({
                 />
                 <div className="flex justify-between text-[10px] text-[#6E615A] mt-1">
                   <span>5 días (Fines de semana)</span>
-                  <span>22 días (Oficina/U)</span>
+                  <span>22 días (Laboral / Estudio)</span>
                   <span>30 días (Diario)</span>
                 </div>
               </div>
@@ -281,17 +284,17 @@ export const PropertyComparer: React.FC<PropertyComparerProps> = ({
                 </label>
                 <input
                   type="range"
-                  min="3200"
-                  max="16000"
-                  step="1600"
+                  min="3550"
+                  max="21300"
+                  step="3550"
                   value={customTransportDayRate}
                   onChange={(e) => setCustomTransportDayRate(Number(e.target.value))}
                   className="w-full accent-[#2B1B17]"
                 />
                 <div className="flex justify-between text-[10px] text-[#6E615A] mt-1">
-                  <span>$3.200 (1 pasaje)</span>
-                  <span>$6.400 (Ida y vuelta)</span>
-                  <span>$12.800+ (Interzonal/Transbordos)</span>
+                  <span>$3.550 (1 pasaje)</span>
+                  <span>$7.100 (Ida y vuelta)</span>
+                  <span>$14.200+ (Interzonal / Transbordos)</span>
                 </div>
               </div>
             </div>
@@ -348,7 +351,7 @@ export const PropertyComparer: React.FC<PropertyComparerProps> = ({
                             className="bg-white/90 hover:bg-white text-[#2B1B17] text-[10px] font-bold px-2 py-1 rounded-lg backdrop-blur-xs transition-colors shadow-xs"
                             title="Cambiar esta propiedad"
                           >
-                            ⇄ Cambiar
+                            Cambiar
                           </button>
                         )}
                         <button
@@ -356,8 +359,11 @@ export const PropertyComparer: React.FC<PropertyComparerProps> = ({
                           onClick={() => onRemoveProperty(property.id)}
                           className="w-6 h-6 bg-black/60 hover:bg-red-600 text-white rounded-lg flex items-center justify-center text-xs transition-colors"
                           title="Quitar de la comparativa"
+                          aria-label="Quitar de la comparativa"
                         >
-                          ✕
+                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
                         </button>
                       </div>
 
@@ -378,17 +384,17 @@ export const PropertyComparer: React.FC<PropertyComparerProps> = ({
                       <div className="flex flex-wrap gap-1.5 min-h-[26px]">
                         {isLowestCost && (
                           <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-emerald-300">
-                            ✓ Menor Costo Total Mensual
+                            Menor Costo Total Mensual
                           </span>
                         )}
                         {isLowestPriceM2 && (
                           <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-blue-200">
-                            📐 Mejor Precio / m² ({formatCOP(pricePerM2)}/m²)
+                            Mejor Precio / m² ({formatCOP(pricePerM2)}/m²)
                           </span>
                         )}
                         {property.verified && property.certified && (
                           <span className="inline-flex items-center gap-1 bg-[#F8F5F0] text-[#2B1B17] text-[10px] font-bold px-2 py-0.5 rounded-full border border-[#D9A76A]">
-                            🛡️ 100% Verificado
+                            100% Verificado
                           </span>
                         )}
                       </div>
@@ -409,12 +415,12 @@ export const PropertyComparer: React.FC<PropertyComparerProps> = ({
                         {calculatedMetrics.length > 1 && (
                           <div className="text-[11px] mt-1 font-semibold">
                             {isLowestCost ? (
-                              <span className="text-emerald-700">
-                                🌟 La alternativa más económica del comparador
+                              <span className="text-emerald-700 font-bold">
+                                Alternativa más económica del comparador
                               </span>
                             ) : (
                               <span className="text-amber-800">
-                                +{formatCOP(diffFromMin)} más al mes vs la más barata
+                                +{formatCOP(diffFromMin)} más al mes vs la más económica
                               </span>
                             )}
                           </div>
@@ -459,15 +465,15 @@ export const PropertyComparer: React.FC<PropertyComparerProps> = ({
                       {/* Mini desglose numérico */}
                       <div className="space-y-1.5 text-xs">
                         <div className="flex justify-between text-[#4A3E39]">
-                          <span>Canon de Arriendo:</span>
+                          <span>Valor de arriendo:</span>
                           <span className="font-bold">{formatCOP(property.price)}</span>
                         </div>
                         <div className="flex justify-between text-[#4A3E39]">
-                          <span>Cuota de Administración:</span>
+                          <span>Cuota de administración:</span>
                           <span className="font-bold">{formatCOP(property.adminFee)}</span>
                         </div>
                         <div className="flex justify-between text-[#4A3E39]">
-                          <span>Transporte mensual est.:</span>
+                          <span>Transporte mensual estimado:</span>
                           <span className="font-bold text-[#8C5E3C]">{formatCOP(transport)}</span>
                         </div>
                       </div>
@@ -481,7 +487,10 @@ export const PropertyComparer: React.FC<PropertyComparerProps> = ({
                       onClick={() => onContactProperty(property)}
                       className="w-full bg-[#2B1B17] hover:bg-[#4A3E39] text-white text-xs font-bold py-3 rounded-xl transition-all shadow-xs flex items-center justify-center gap-2"
                     >
-                      <span>🔒 Contactar con KYC</span>
+                      <svg className="w-4 h-4 text-[#D9A76A]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                      <span>Contactar con KYC</span>
                     </button>
                   </div>
                 </div>
@@ -555,7 +564,7 @@ export const PropertyComparer: React.FC<PropertyComparerProps> = ({
                   {/* SECCIÓN 1: COSTO TOTAL Y DESGLOSE FINANCIERO */}
                   <tr className="bg-[#F8F5F0]/70 font-extrabold text-[#2B1B17]">
                     <td colSpan={calculatedMetrics.length + 1} className="py-2.5 px-4 text-[11px] uppercase tracking-wider">
-                      💰 1. Desglose Financiero y Costo Total Mensual
+                      1. Desglose Financiero y Costo Total Mensual
                     </td>
                   </tr>
 
@@ -564,7 +573,7 @@ export const PropertyComparer: React.FC<PropertyComparerProps> = ({
                     <td className="p-4 text-[#2B1B17] sticky left-0 bg-amber-50/90 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
                       <div>
                         <span className="font-extrabold text-sm text-[#2B1B17] block">Costo Total Mensual</span>
-                        <span className="text-[10px] text-[#6E615A] font-normal">Arriendo + Admin + Transporte</span>
+                        <span className="text-[10px] text-[#6E615A] font-normal">Arriendo + Administración + Transporte</span>
                       </div>
                     </td>
                     {calculatedMetrics.map(({ property, totalMonthly }) => (
@@ -574,17 +583,17 @@ export const PropertyComparer: React.FC<PropertyComparerProps> = ({
                         </div>
                         {totalMonthly === lowestTotalMonthly && (
                           <span className="inline-block bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-md mt-1">
-                            ✓ Más económico
+                            Más económico
                           </span>
                         )}
                       </td>
                     ))}
                   </tr>
 
-                  {/* Canon de Arriendo */}
+                  {/* Arriendo Mensual */}
                   <tr>
                     <td className="p-4 text-[#4A3E39] font-medium sticky left-0 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                      Canon de Arriendo mensual
+                      Valor de arriendo mensual
                     </td>
                     {calculatedMetrics.map(({ property }) => (
                       <td key={property.id} className="p-4 font-semibold text-[#2B1B17]">
@@ -596,7 +605,7 @@ export const PropertyComparer: React.FC<PropertyComparerProps> = ({
                   {/* Cuota de Administración */}
                   <tr>
                     <td className="p-4 text-[#4A3E39] font-medium sticky left-0 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                      Cuota de Administración
+                      Cuota de administración
                     </td>
                     {calculatedMetrics.map(({ property }) => (
                       <td key={property.id} className="p-4 font-semibold text-[#2B1B17]">
@@ -609,7 +618,7 @@ export const PropertyComparer: React.FC<PropertyComparerProps> = ({
                   <tr>
                     <td className="p-4 text-[#4A3E39] font-medium sticky left-0 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
                       <div>
-                        <span>Transporte Estimado Mensual</span>
+                        <span>Transporte estimado mensual</span>
                         <span className="text-[10px] text-[#8C5E3C] block font-normal">
                           {isCustomTransport ? 'Configuración personalizada' : activeProfile.name}
                         </span>
@@ -628,7 +637,7 @@ export const PropertyComparer: React.FC<PropertyComparerProps> = ({
                   {/* Valor por m2 */}
                   <tr>
                     <td className="p-4 text-[#4A3E39] font-medium sticky left-0 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                      Precio por Metro Cuadrado ($/m²)
+                      Precio por metro cuadrado ($/m²)
                     </td>
                     {calculatedMetrics.map(({ property, pricePerM2 }) => (
                       <td key={property.id} className="p-4 text-[#2B1B17]">
@@ -645,13 +654,13 @@ export const PropertyComparer: React.FC<PropertyComparerProps> = ({
                   {/* Depósito requerido */}
                   <tr>
                     <td className="p-4 text-[#4A3E39] font-medium sticky left-0 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                      Depósito de Garantía
+                      Depósito de garantía
                     </td>
                     {calculatedMetrics.map(({ property }) => (
                       <td key={property.id} className="p-4 text-[#2B1B17]">
                         <span className="font-semibold">{formatCOP(property.deposit)}</span>
                         <span className="text-[10px] text-[#6E615A] block">
-                          ({property.requirements.depositMonths} mes{property.requirements.depositMonths === 1 ? '' : 'es'} de canon)
+                          ({property.requirements.depositMonths} mes{property.requirements.depositMonths === 1 ? '' : 'es'} de arriendo)
                         </span>
                       </td>
                     ))}
@@ -660,7 +669,7 @@ export const PropertyComparer: React.FC<PropertyComparerProps> = ({
                   {/* Inversión Inicial Primer Mes */}
                   <tr className="bg-[#F8F5F0]/40">
                     <td className="p-4 text-[#4A3E39] font-bold sticky left-0 bg-[#F8F5F0] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                      Inversión Inicial Desembolsable (Mes 1)
+                      Inversión inicial requerida (Mes 1)
                       <span className="text-[10px] text-[#6E615A] block font-normal">
                         Costo total + Depósito en garantía
                       </span>
@@ -675,30 +684,30 @@ export const PropertyComparer: React.FC<PropertyComparerProps> = ({
                   {/* SECCIÓN 2: SEGURIDAD Y VERIFICACIÓN WALLEX */}
                   <tr className="bg-[#F8F5F0]/70 font-extrabold text-[#2B1B17]">
                     <td colSpan={calculatedMetrics.length + 1} className="py-2.5 px-4 text-[11px] uppercase tracking-wider">
-                      🛡️ 2. Confianza y Verificación Wallex
+                      2. Confianza y Verificación Wallex
                     </td>
                   </tr>
 
                   {/* Verificación KYC Propietario */}
                   <tr>
                     <td className="p-4 text-[#4A3E39] font-medium sticky left-0 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                      Identidad del Propietario (KYC)
+                      Identidad del propietario (KYC)
                     </td>
                     {calculatedMetrics.map(({ property }) => (
                       <td key={property.id} className="p-4">
                         {property.verified ? (
                           <div className="flex items-center gap-1.5 text-emerald-700 font-bold">
-                            <span className="w-4 h-4 rounded-full bg-emerald-100 flex items-center justify-center text-[10px]">
-                              ✓
-                            </span>
+                            <svg className="w-3.5 h-3.5 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
                             <span>Verificada con Cédula y Biometría</span>
                           </div>
                         ) : (
                           <div className="flex items-center gap-1.5 text-amber-700 font-bold">
-                            <span className="w-4 h-4 rounded-full bg-amber-100 flex items-center justify-center text-[10px]">
+                            <span className="w-3.5 h-3.5 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center text-[10px]">
                               !
                             </span>
-                            <span>Sin verificar (Riesgo informal)</span>
+                            <span>Sin verificar (Canal informal)</span>
                           </div>
                         )}
                         <span className="text-[10px] text-[#6E615A] block mt-0.5">
@@ -711,13 +720,13 @@ export const PropertyComparer: React.FC<PropertyComparerProps> = ({
                   {/* Certificado de Tradición y Libertad */}
                   <tr>
                     <td className="p-4 text-[#4A3E39] font-medium sticky left-0 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                      Certificado de Tradición (VUR/SNR)
+                      Certificado de Tradición (VUR / SNR)
                     </td>
                     {calculatedMetrics.map(({ property }) => (
                       <td key={property.id} className="p-4">
                         {property.certified ? (
                           <span className="inline-flex items-center gap-1 bg-[#D9A76A]/20 text-[#2B1B17] font-bold px-2.5 py-1 rounded-md border border-[#D9A76A]">
-                            ✓ Cotejado y Válido
+                            Cotejado y Válido
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 bg-gray-100 text-[#6E615A] font-semibold px-2 py-0.5 rounded-md">
@@ -731,7 +740,7 @@ export const PropertyComparer: React.FC<PropertyComparerProps> = ({
                   {/* SECCIÓN 3: REQUISITOS DE ENTRADA */}
                   <tr className="bg-[#F8F5F0]/70 font-extrabold text-[#2B1B17]">
                     <td colSpan={calculatedMetrics.length + 1} className="py-2.5 px-4 text-[11px] uppercase tracking-wider">
-                      📋 3. Requisitos de Acceso
+                      3. Requisitos de Acceso
                     </td>
                   </tr>
 
@@ -744,7 +753,7 @@ export const PropertyComparer: React.FC<PropertyComparerProps> = ({
                       <td key={property.id} className="p-4">
                         {!property.requirements.guarantorRequired ? (
                           <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-800 font-bold px-2 py-0.5 rounded-md border border-emerald-200">
-                            ✓ NO exige codeudor finca raíz
+                            No exige codeudor de finca raíz
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-900 font-semibold px-2 py-0.5 rounded-md border border-amber-200">
@@ -765,7 +774,7 @@ export const PropertyComparer: React.FC<PropertyComparerProps> = ({
                       return (
                         <td key={property.id} className="p-4">
                           <span className="font-semibold text-[#2B1B17]">
-                            {property.requirements.minIncomeMultiplier}x el canon ({formatCOP(requiredIncome)})
+                            {property.requirements.minIncomeMultiplier}x el arriendo ({formatCOP(requiredIncome)})
                           </span>
                         </td>
                       );
@@ -775,14 +784,14 @@ export const PropertyComparer: React.FC<PropertyComparerProps> = ({
                   {/* Mascotas */}
                   <tr>
                     <td className="p-4 text-[#4A3E39] font-medium sticky left-0 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                      Mascotas Permitidas (Pet Friendly)
+                      Mascotas Permitidas
                     </td>
                     {calculatedMetrics.map(({ property }) => (
                       <td key={property.id} className="p-4">
                         {property.requirements.petsAllowed ? (
-                          <span className="text-emerald-700 font-bold">🐾 Sí se admiten</span>
+                          <span className="text-emerald-700 font-bold">Sí se admiten</span>
                         ) : (
-                          <span className="text-red-700 font-semibold">✕ No permitidas</span>
+                          <span className="text-red-700 font-semibold">No permitidas</span>
                         )}
                       </td>
                     ))}
@@ -803,7 +812,7 @@ export const PropertyComparer: React.FC<PropertyComparerProps> = ({
                   {/* SECCIÓN 4: ESPACIO Y AMENIDADES */}
                   <tr className="bg-[#F8F5F0]/70 font-extrabold text-[#2B1B17]">
                     <td colSpan={calculatedMetrics.length + 1} className="py-2.5 px-4 text-[11px] uppercase tracking-wider">
-                      🏠 4. Características Físicas y del Inmueble
+                      4. Características Físicas y del Inmueble
                     </td>
                   </tr>
 
@@ -915,8 +924,11 @@ export const PropertyComparer: React.FC<PropertyComparerProps> = ({
                 type="button"
                 onClick={() => setShowAddModal(false)}
                 className="w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:bg-[#F8F5F0]"
+                aria-label="Cerrar"
               >
-                ✕
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
 
@@ -937,7 +949,7 @@ export const PropertyComparer: React.FC<PropertyComparerProps> = ({
                         />
                         {prop.verified && (
                           <span className="absolute top-2 left-2 bg-[#2B1B17] text-white text-[9px] font-bold px-2 py-0.5 rounded-md">
-                            ✓ Verificado
+                            Verificado
                           </span>
                         )}
                       </div>
@@ -952,7 +964,7 @@ export const PropertyComparer: React.FC<PropertyComparerProps> = ({
                         <span className="text-[10px] font-normal text-[#6E615A]">/ mes</span>
                       </div>
                       <div className="text-[11px] text-[#6E615A] mt-0.5">
-                        Costo total est.: <strong className="text-[#2B1B17]">{formatCOP(totalCost)}</strong>
+                        Costo total estimado: <strong className="text-[#2B1B17]">{formatCOP(totalCost)}</strong>
                       </div>
                     </div>
 

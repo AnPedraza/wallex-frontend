@@ -46,20 +46,23 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
               Inmuebles disponibles en Bogotá
             </h1>
             <p className="text-[#6E615A] mt-1 text-sm">
-              Viviendas verificadas con precios transparentes, sin intermediarios ocultos ni cláusulas abusivas.
+              Viviendas verificadas con precios transparentes, sin intermediarios ocultos ni cobros sorpresivos.
             </p>
           </div>
 
-          {/* Banner o acceso directo a Comparador */}
+          {/* Acceso directo a Comparador */}
           {onOpenComparer && (
             <button
               type="button"
               onClick={onOpenComparer}
               className="flex items-center gap-2 bg-white border border-[#EAE4DC] hover:border-[#2B1B17] text-[#2B1B17] px-4 py-2.5 rounded-xl font-bold text-xs shadow-xs hover:shadow-md transition-all self-start md:self-auto"
             >
-              <span>⚖️ Abrir Comparador Lado a Lado</span>
+              <svg className="w-4 h-4 text-[#8C5E3C]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              <span>Abrir Comparador Lado a Lado</span>
               {comparisonIds.length > 0 && (
-                <span className="bg-[#2B1B17] text-white text-[10px] px-2 py-0.5 rounded-full">
+                <span className="bg-[#2B1B17] text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
                   {comparisonIds.length} seleccionada{comparisonIds.length === 1 ? '' : 's'}
                 </span>
               )}
@@ -70,7 +73,7 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
 
       {/* Contenedor Principal: Filtros + Grid de Inmuebles */}
       <div className="max-w-7xl mx-auto px-6 py-6 grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* Sidebar de Filtros (Mockup 05) */}
+        {/* Sidebar de Filtros */}
         <aside className="bg-white p-6 rounded-2xl shadow-xs border border-[#EAE4DC] h-fit space-y-6">
           <h2 className="text-lg font-bold border-b border-[#EAE4DC] pb-3 text-[#2B1B17]">
             Filtros de Búsqueda
@@ -128,8 +131,8 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
         <main className="lg:col-span-3 space-y-6">
           <div className="flex justify-between items-center text-sm text-[#6E615A]">
             <span>Mostrando {filteredProperties.length} propiedades encontradas</span>
-            <span className="text-xs text-[#8C5E3C]">
-              💡 Puedes seleccionar hasta 3 propiedades para comparar lado a lado
+            <span className="text-xs text-[#8C5E3C] font-medium">
+              Puedes seleccionar hasta 3 propiedades para comparar lado a lado
             </span>
           </div>
 
@@ -157,7 +160,7 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
                       />
                       {property.verified && (
                         <span className="absolute top-3 left-3 bg-[#2B1B17] text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-                          ✓ Verificada
+                          Identidad Verificada
                         </span>
                       )}
                       {property.certified && (
@@ -177,7 +180,14 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
                               : 'bg-white/90 hover:bg-white text-[#2B1B17]'
                           }`}
                         >
-                          <span>{isSelectedForCompare ? '✓ En Comparador' : '⚖️ Comparar'}</span>
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            {isSelectedForCompare ? (
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            ) : (
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                            )}
+                          </svg>
+                          <span>{isSelectedForCompare ? 'En Comparador' : 'Comparar'}</span>
                         </button>
                       )}
                     </div>
@@ -200,33 +210,35 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
                         </p>
                       </div>
 
-                      {/* Costo Total Real Estimado (Valor agregado US-06) */}
+                      {/* Costo Total Real Estimado */}
                       <div className="bg-[#F8F5F0] p-3 rounded-xl border border-[#EAE4DC] text-xs">
                         <div className="flex justify-between items-center">
-                          <span className="text-[#6E615A] font-medium">Costo Total Mensual est.:</span>
+                          <span className="text-[#6E615A] font-medium">Costo Total Mensual estimado:</span>
                           <strong className="text-[#2B1B17]">{formatCOP(estTotalCost)}</strong>
                         </div>
-                        <span className="text-[10px] text-[#8C5E3C] block mt-0.5">
-                          (Incluye {formatCOP(property.estimatedTransportMonthly)} transporte aprox. Bogotá)
+                        <span className="text-[10px] text-[#8C5E3C] block mt-0.5 font-medium">
+                          (Incluye {formatCOP(property.estimatedTransportMonthly)} de transporte estimado en Bogotá)
                         </span>
                       </div>
 
                       {/* Requisitos destacados */}
                       <div className="text-[11px] text-[#4A3E39]">
                         {!property.requirements.guarantorRequired ? (
-                          <span className="text-emerald-700 font-bold">✓ Sin codeudor finca raíz</span>
+                          <span className="text-emerald-700 font-bold">Sin codeudor de finca raíz</span>
                         ) : (
-                          <span className="text-amber-800">Requiere codeudor solidario</span>
+                          <span className="text-amber-800 font-medium">Requiere codeudor solidario</span>
                         )}
-                        <span className="mx-1">•</span>
+                        <span className="mx-1.5 text-gray-300">•</span>
                         <span>Depósito: {property.requirements.depositMonths} mes</span>
                       </div>
 
                       {/* Detalles del espacio */}
                       <div className="flex items-center gap-4 text-xs font-medium text-[#6E615A] border-t border-[#F8F5F0] pt-3">
-                        <span>📐 {property.area} m²</span>
-                        <span>🛏️ {property.bedrooms} Hab</span>
-                        <span>🚿 {property.bathrooms} Baños</span>
+                        <span>{property.area} m² construidos</span>
+                        <span className="text-gray-300">•</span>
+                        <span>{property.bedrooms} Hab</span>
+                        <span className="text-gray-300">•</span>
+                        <span>{property.bathrooms} Baños</span>
                       </div>
                     </div>
                   </div>
@@ -253,13 +265,17 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
         <div className="fixed bottom-4 inset-x-0 z-40 px-4 flex justify-center">
           <div className="bg-[#2B1B17] text-white rounded-2xl p-4 shadow-2xl flex flex-wrap items-center justify-between gap-4 max-w-3xl w-full border border-[#4A3E39] backdrop-blur-md">
             <div className="flex items-center gap-3">
-              <span className="text-xl">⚖️</span>
+              <div className="w-8 h-8 rounded-lg bg-[#4A3E39] flex items-center justify-center text-white">
+                <svg className="w-4 h-4 text-[#D9A76A]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
               <div>
                 <span className="text-sm font-extrabold block">
-                  {comparisonIds.length} {comparisonIds.length === 1 ? 'propiedad seleccionada' : 'propiedades seleccionadas'} (Máx. 3)
+                  {comparisonIds.length} {comparisonIds.length === 1 ? 'propiedad seleccionada' : 'propiedades seleccionadas'} (Máximo 3)
                 </span>
                 <span className="text-[11px] text-[#D9A76A]">
-                  Compara Arriendo + Admin + Transporte lado a lado
+                  Compara Arriendo + Administración + Transporte lado a lado
                 </span>
               </div>
             </div>
@@ -284,14 +300,19 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
             <button
               type="button"
               onClick={() => setShowKycModal(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg"
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 w-8 h-8 rounded-full flex items-center justify-center"
+              aria-label="Cerrar"
             >
-              ✕
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
 
             <div className="text-center space-y-2">
-              <div className="w-12 h-12 bg-[#F8F5F0] text-[#2B1B17] rounded-full flex items-center justify-center mx-auto text-xl font-bold">
-                🔒
+              <div className="w-12 h-12 bg-[#F8F5F0] text-[#2B1B17] rounded-full flex items-center justify-center mx-auto">
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
               </div>
               <h3 className="text-xl font-bold text-[#2B1B17]">
                 Verifica tu identidad para contactar
@@ -304,10 +325,16 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
 
             <div className="space-y-3 bg-[#F8F5F0] p-4 rounded-2xl border border-[#EAE4DC] text-xs">
               <div className="flex items-center gap-2 text-[#2B1B17] font-semibold">
-                <span>✓</span> Cédula de Ciudadanía cargada
+                <svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>Cédula de Ciudadanía cargada</span>
               </div>
               <div className="flex items-center gap-2 text-[#2B1B17] font-semibold">
-                <span>✓</span> Verificación facial biométrica
+                <svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>Verificación facial biométrica</span>
               </div>
             </div>
 

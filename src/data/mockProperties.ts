@@ -4,7 +4,7 @@ export const TRANSPORT_PROFILES: TransportProfile[] = [
   {
     id: 'standard',
     name: 'Uso Diario TransMilenio / SITP',
-    description: '2 trayectos al día, 22 días hábiles (Tarifa Bogotá ~$3.200/pasaje)',
+    description: '2 trayectos al día, 22 días hábiles (Tarifa Bogotá $3.550/pasaje)',
     multiplier: 1.0,
   },
   {
@@ -30,7 +30,7 @@ export const INITIAL_PROPERTIES: Property[] = [
     price: 1850000,
     adminFee: 250000,
     deposit: 1850000,
-    estimatedTransportMonthly: 98000,
+    estimatedTransportMonthly: 106500,
     transitAccess: 'A 5 min de TransMilenio Calle 63 y ciclorruta Cra 7ma',
     area: 55,
     bedrooms: 2,
@@ -58,7 +58,7 @@ export const INITIAL_PROPERTIES: Property[] = [
     price: 2100000,
     adminFee: 300000,
     deposit: 1000000,
-    estimatedTransportMonthly: 140000,
+    estimatedTransportMonthly: 156200,
     transitAccess: 'A 6 min de estación Calle 45 y Parkway',
     area: 68,
     bedrooms: 2,
@@ -86,7 +86,7 @@ export const INITIAL_PROPERTIES: Property[] = [
     price: 1650000,
     adminFee: 200000,
     deposit: 1650000,
-    estimatedTransportMonthly: 235000,
+    estimatedTransportMonthly: 248500,
     transitAccess: 'A 12 min de estación Alcalá (AutoNorte) + SITP Cl 140',
     area: 48,
     bedrooms: 1,
@@ -114,7 +114,7 @@ export const INITIAL_PROPERTIES: Property[] = [
     price: 1950000,
     adminFee: 220000,
     deposit: 1950000,
-    estimatedTransportMonthly: 125000,
+    estimatedTransportMonthly: 142000,
     transitAccess: 'A 8 min de TransMilenio Concejo de Bogotá y Av. El Dorado',
     area: 60,
     bedrooms: 2,
@@ -142,7 +142,7 @@ export const INITIAL_PROPERTIES: Property[] = [
     price: 1400000,
     adminFee: 160000,
     deposit: 800000,
-    estimatedTransportMonthly: 64000,
+    estimatedTransportMonthly: 71000,
     transitAccess: 'A 3 min de TransMilenio Calle 57, caminable a universidades',
     area: 36,
     bedrooms: 1,
@@ -170,7 +170,7 @@ export const INITIAL_PROPERTIES: Property[] = [
     price: 2450000,
     adminFee: 340000,
     deposit: 2450000,
-    estimatedTransportMonthly: 155000,
+    estimatedTransportMonthly: 177500,
     transitAccess: 'A 5 min de estación CAN y Av. Esperanza',
     area: 76,
     bedrooms: 3,
@@ -208,7 +208,7 @@ export function calculateTotalMonthlyCost(
 }
 
 /**
- * Calcula el valor por metro cuadrado del canon
+ * Calcula el valor por metro cuadrado del arriendo
  */
 export function calculatePricePerM2(property: Property): number {
   if (!property.area || property.area <= 0) return 0;

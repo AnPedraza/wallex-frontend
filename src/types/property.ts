@@ -1,6 +1,6 @@
 export interface PropertyRequirements {
   guarantorRequired: boolean; // ¿Exige codeudor con finca raíz tradicional?
-  minIncomeMultiplier: number; // Múltiplo de ingresos mínimos requeridos (ej. 2x o 2.5x canon)
+  minIncomeMultiplier: number; // Múltiplo de ingresos mínimos requeridos (ej. 2x o 2.5x el valor de arriendo)
   petsAllowed: boolean; // ¿Acepta mascotas?
   leaseTermMonths: number; // Plazo mínimo de contrato en meses
   depositMonths: number; // Meses de depósito exigidos (0 si no aplica)
@@ -12,7 +12,7 @@ export interface Property {
   title: string;
   location: string;
   zone: string; // Localidad / Zona de Bogotá (Chapinero, Teusaquillo, Cedritos, etc.)
-  price: number; // Canon de arrendamiento mensual (COP)
+  price: number; // Valor de arriendo mensual (COP)
   adminFee: number; // Cuota de administración mensual (COP)
   deposit: number; // Depósito en garantía (COP)
   estimatedTransportMonthly: number; // Estimación base mensual de transporte (SITP / TransMilenio)
