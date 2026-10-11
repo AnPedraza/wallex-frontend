@@ -1,79 +1,13 @@
 import React, { useState } from 'react';
-
-interface Property {
-  id: string;
-  title: string;
-  location: string;
-  price: number;
-  adminFee: number;
-  area: number;
-  bedrooms: number;
-  bathrooms: number;
-  verified: boolean;
-  certified: boolean;
-  image: string;
-}
-
-const mockProperties: Property[] = [
-  {
-    id: '1',
-    title: 'Apartamento en Chapinero Alto',
-    location: 'Chapinero Alto, Bogotá',
-    price: 1850000,
-    adminFee: 250000,
-    area: 55,
-    bedrooms: 2,
-    bathrooms: 1,
-    verified: true,
-    certified: true,
-    image: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=600&q=80',
-  },
-  {
-    id: '2',
-    title: 'Apartamento en Teusaquillo',
-    location: 'Teusaquillo, Bogotá',
-    price: 2100000,
-    adminFee: 300000,
-    area: 68,
-    bedrooms: 2,
-    bathrooms: 2,
-    verified: true,
-    certified: false,
-    image: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=600&q=80',
-  },
-  {
-    id: '3',
-    title: 'Apto Moderno en Cedritos',
-    location: 'Cedritos, Bogotá',
-    price: 1650000,
-    adminFee: 200000,
-    area: 48,
-    bedrooms: 1,
-    bathrooms: 1,
-    verified: true,
-    certified: true,
-    image: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=600&q=80',
-  },
-  {
-    id: '4',
-    title: 'Apartamento en La Soledad',
-    location: 'Teusaquillo, Bogotá',
-    price: 1950000,
-    adminFee: 220000,
-    area: 60,
-    bedrooms: 2,
-    bathrooms: 2,
-    verified: false,
-    certified: false,
-    image: 'https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=600&q=80',
-  },
-];
+import { cardImage, mockProperties, monthlyTotal, type Property } from '../data/properties';
+import { PropertyDetail } from './PropertyDetail';
 
 export const PropertyPortal: React.FC = () => {
   const [selectedZone, setSelectedZone] = useState<string>('Todas');
   const [maxPrice, setMaxPrice] = useState<number>(3000000);
   const [showKycModal, setShowKycModal] = useState<boolean>(false);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [detailProperty, setDetailProperty] = useState<Property | null>(null);
 
   // Filtrado de propiedades
   const filteredProperties = mockProperties.filter((p) => {
@@ -85,6 +19,12 @@ export const PropertyPortal: React.FC = () => {
   const handleContact = (property: Property) => {
     setSelectedProperty(property);
     setShowKycModal(true);
+  };
+
+  // Desde la ficha: se cierra y se abre el modal KYC con ese inmueble
+  const handleContactFromDetail = (property: Property) => {
+    setDetailProperty(null);
+    handleContact(property);
   };
 
   return (
@@ -168,18 +108,25 @@ export const PropertyPortal: React.FC = () => {
               >
                 {/* Imagen del Inmueble */}
                 <div className="relative h-48 w-full bg-gray-200">
-                  <img
-                    src={property.image}
-                    alt={property.title}
-                    className="w-full h-full object-cover"
-                  />
+                  <button
+                    type="button"
+                    onClick={() => setDetailProperty(property)}
+                    aria-label={`Ver ficha completa de ${property.title}`}
+                    className="block w-full h-full focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#2B1B17]"
+                  >
+                    <img
+                      src={cardImage(property)}
+                      alt={property.title}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
                   {property.verified && (
-                    <span className="absolute top-3 left-3 bg-[#2B1B17] text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                    <span className="absolute top-3 left-3 bg-[#2B1B17] text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider pointer-events-none">
                       ✓ Verificada
                     </span>
                   )}
                   {property.certified && (
-                    <span className="absolute top-3 right-3 bg-[#D9A76A] text-[#2B1B17] text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                    <span className="absolute top-3 right-3 bg-[#D9A76A] text-[#2B1B17] text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider pointer-events-none">
                       Certificado de Tradición
                     </span>
                   )}
@@ -192,14 +139,21 @@ export const PropertyPortal: React.FC = () => {
                       {property.location}
                     </span>
                     <h3 className="text-lg font-bold text-[#2B1B17] mt-1">
-                      {property.title}
+                      <button
+                        type="button"
+                        onClick={() => setDetailProperty(property)}
+                        className="text-left hover:underline rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2B1B17]"
+                      >
+                        {property.title}
+                      </button>
                     </h3>
                     <div className="text-2xl font-extrabold text-[#2B1B17] mt-2">
-                      ${property.price.toLocaleString('es-CO')}{' '}
-                      <span className="text-xs font-normal text-[#6E615A]">/ mes</span>
+                      ${monthlyTotal(property).toLocaleString('es-CO')}{' '}
+                      <span className="text-xs font-normal text-[#6E615A]">/ mes en total</span>
                     </div>
                     <p className="text-xs text-[#6E615A] mt-0.5">
-                      + ${property.adminFee.toLocaleString('es-CO')} administración
+                      ${property.price.toLocaleString('es-CO')} de canon + $
+                      {property.adminFee.toLocaleString('es-CO')} de administración
                     </p>
                   </div>
 
@@ -209,6 +163,14 @@ export const PropertyPortal: React.FC = () => {
                     <span>🛏️ {property.bedrooms} Hab</span>
                     <span>🚿 {property.bathrooms} Baños</span>
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setDetailProperty(property)}
+                    className="w-full border border-[#2B1B17] text-[#2B1B17] font-medium py-3 rounded-xl hover:bg-[#F8F5F0] transition-colors text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2B1B17]"
+                  >
+                    Ver ficha completa
+                  </button>
 
                   {/* Botón de Contacto KYC */}
                   <button
@@ -223,6 +185,14 @@ export const PropertyPortal: React.FC = () => {
           </div>
         </main>
       </div>
+
+      {detailProperty && (
+        <PropertyDetail
+          property={detailProperty}
+          onClose={() => setDetailProperty(null)}
+          onContact={handleContactFromDetail}
+        />
+      )}
 
       {/* Modal KYC de Verificación (Mockups 03 y 04) */}
       {showKycModal && selectedProperty && (
