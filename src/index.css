@@ -131,6 +131,22 @@
     animation: seal-draw 1300ms cubic-bezier(0.16, 1, 0.3, 1) both;
     animation-delay: calc(var(--i, 0) * 110ms);
   }
+  /* Sin verificar: el sello cae como un timbre de "anulado" */
+  .seal-void {
+    animation: seal-stamp 520ms cubic-bezier(0.16, 1, 0.3, 1) 520ms both;
+    transform-origin: center;
+  }
+  @keyframes seal-stamp {
+    0% {
+      transform: scale(1) rotate(0deg);
+    }
+    35% {
+      transform: scale(0.9) rotate(-5deg);
+    }
+    100% {
+      transform: scale(1) rotate(0deg);
+    }
+  }
   @keyframes seal-draw {
     from {
       stroke-dashoffset: var(--len);
@@ -140,7 +156,8 @@
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    .seal-draw .seal-stroke {
+    .seal-draw .seal-stroke,
+    .seal-void {
       animation: none;
     }
     .folio-range::-webkit-slider-thumb {

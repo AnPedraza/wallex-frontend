@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 
 export type SealStatus = 'verified' | 'pending' | 'unverified';
 
@@ -48,6 +48,7 @@ const initialPhase = (): Phase => {
 export const FolioSeal: React.FC<FolioSealProps> = ({ seed, status, size = 48 }) => {
   const ref = useRef<SVGSVGElement>(null);
   const [phase, setPhase] = useState<Phase>(initialPhase);
+  const maskId = `sello-${useId().replace(/:/g, '')}`;
 
   useEffect(() => {
     const node = ref.current;
@@ -65,15 +66,6 @@ export const FolioSeal: React.FC<FolioSealProps> = ({ seed, status, size = 48 })
     return () => observer.disconnect();
   }, [phase]);
 
-  if (status === 'unverified') {
-    return (
-      <svg width={size} height={size} viewBox="-22 -22 44 44" aria-hidden="true" className="shrink-0">
-        <circle r="19" fill="none" stroke="var(--color-unverified)" strokeWidth="1.1" strokeDasharray="2.4 2.4" />
-        <path d="M-6 -6 L6 6 M6 -6 L-6 6" stroke="var(--color-unverified)" strokeWidth="1.4" strokeLinecap="round" />
-      </svg>
-    );
-  }
-
   // Misma estructura para todos; solo cambian las ondas y el giro
   const h = hash(seed);
   const outerLobes = 10 + (h % 4); // 10 a 13 ondas
@@ -82,11 +74,8 @@ export const FolioSeal: React.FC<FolioSealProps> = ({ seed, status, size = 48 })
   const outer = [0, 1, 2].map((j) => guilloche(16.2, 3.6, outerLobes, turn + (j * 2 * Math.PI) / 3));
   const inner = [0, 1].map((j) => guilloche(8.6, 1.9, innerLobes, turn + j * Math.PI));
 
-  const outerColor = status === 'verified' ? 'var(--color-verified)' : 'var(--color-pending)';
-  const innerColor = status === 'verified' ? 'var(--color-ink)' : 'var(--color-pending)';
-  const animated = status === 'verified' && phase !== 'still';
-
-  // Cada curva se dibuja con su propia longitud (--len) y entra escalonada (--i)
+  const animated = phase !== 'still';
+  // Cada trazo se dibuja con su propia longitud (--len) y entra escalonado (--i)
   const strokeProps = (len: number, i: number) =>
     animated
       ? {
@@ -95,15 +84,45 @@ export const FolioSeal: React.FC<FolioSealProps> = ({ seed, status, size = 48 })
         }
       : {};
 
+  // Barrido circular: un trazo grueso en una máscara revela el sello en el sentido del reloj.
+  // Sirve para los sellos punteados, que no se pueden "dibujar" con su propio trazo.
+  const SWEEP_LEN = 70; // 2π · 11
+  const sweepMask = (
+    <mask id={maskId}>
+      <circle r="11" fill="none" stroke="white" strokeWidth="23" transform="rotate(-90)" {...strokeProps(SWEEP_LEN, 0)} />
+    </mask>
+  );
+
+  const svgClass = `shrink-0 ${phase === 'draw' ? `seal-draw ${status === 'unverified' ? 'seal-void' : ''}` : ''}`;
+
+  if (status === 'unverified') {
+    // Sin verificar: el círculo se dibuja, después la equis, y el sello cae como un timbre
+    return (
+      <svg ref={ref} width={size} height={size} viewBox="-22 -22 44 44" aria-hidden="true" className={svgClass}>
+        {animated && sweepMask}
+        {animated && <circle r="19" fill="none" stroke="var(--color-unverified)" strokeWidth="1.1" strokeDasharray="2.4 2.4" opacity="0.18" />}
+        <circle
+          r="19"
+          fill="none"
+          stroke="var(--color-unverified)"
+          strokeWidth="1.1"
+          strokeDasharray="2.4 2.4"
+          mask={animated ? `url(#${maskId})` : undefined}
+        />
+        <g stroke="var(--color-unverified)" strokeWidth="1.4" strokeLinecap="round">
+          <path d="M-6 -6 L6 6" {...strokeProps(17, 4)} />
+          <path d="M6 -6 L-6 6" {...strokeProps(17, 5)} />
+        </g>
+      </svg>
+    );
+  }
+
+  const outerColor = status === 'verified' ? 'var(--color-verified)' : 'var(--color-pending)';
+  const innerColor = status === 'verified' ? 'var(--color-ink)' : 'var(--color-pending)';
+  const pending = status === 'pending';
+
   return (
-    <svg
-      ref={ref}
-      width={size}
-      height={size}
-      viewBox="-22 -22 44 44"
-      aria-hidden="true"
-      className={`shrink-0 ${phase === 'draw' ? 'seal-draw' : ''}`}
-    >
+    <svg ref={ref} width={size} height={size} viewBox="-22 -22 44 44" aria-hidden="true" className={svgClass}>
       {/* Marca de agua: la roseta completa en tinta tenue, siempre visible */}
       {animated && (
         <g fill="none" stroke={outerColor} strokeWidth="0.7" opacity="0.18">
@@ -112,12 +131,20 @@ export const FolioSeal: React.FC<FolioSealProps> = ({ seed, status, size = 48 })
           ))}
         </g>
       )}
-      <g fill="none" strokeWidth="0.7" strokeLinejoin="round" strokeDasharray={status === 'pending' ? '1.4 1.3' : undefined}>
+      {/* Pendiente: el sello punteado se revela con un barrido, como una revisión que avanza */}
+      {animated && pending && sweepMask}
+      <g
+        fill="none"
+        strokeWidth="0.7"
+        strokeLinejoin="round"
+        strokeDasharray={pending ? '1.4 1.3' : undefined}
+        mask={animated && pending ? `url(#${maskId})` : undefined}
+      >
         {outer.map((c, k) => (
-          <path key={`o${k}`} d={c.d} stroke={outerColor} {...strokeProps(c.length, k)} />
+          <path key={`o${k}`} d={c.d} stroke={outerColor} {...(pending ? {} : strokeProps(c.length, k))} />
         ))}
         {inner.map((c, k) => (
-          <path key={`i${k}`} d={c.d} stroke={innerColor} {...strokeProps(c.length, 3 + k)} />
+          <path key={`i${k}`} d={c.d} stroke={innerColor} {...(pending ? {} : strokeProps(c.length, 3 + k))} />
         ))}
         <circle r="2.2" stroke={innerColor} strokeWidth="0.8" />
       </g>

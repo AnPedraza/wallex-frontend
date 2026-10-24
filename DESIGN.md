@@ -244,7 +244,10 @@ La roseta de guilloche (`FolioSeal`) siempre tiene la misma estructura: tres ban
 - **Pendiente:** el mismo dibujo, punteado y en ámbar.
 - **Sin verificar:** círculo punteado en rojo con una equis.
 
-**Animación:** la roseta verificada aparece primero como marca de agua al 18 % y luego la tinta se imprime encima, curva por curva, escalonadas cada 110 ms. Cada curva se anima según su longitud real, así que todas terminan igual de suaves. Ocurre una sola vez, al entrar en pantalla, y no ocurre con `prefers-reduced-motion`.
+**Animación:** cada estado tiene su propia entrada, pero las tres son de la misma familia. Todas parten de una marca de agua del sello al 18 %, ocurren una sola vez al entrar en pantalla y no ocurren con `prefers-reduced-motion`.
+- **Verificado:** la tinta se imprime curva por curva, escalonadas cada 110 ms. Cada curva se anima según su longitud real, así que todas terminan igual de suaves.
+- **Pendiente:** el sello punteado se revela con un barrido circular, en el sentido del reloj, como una revisión que avanza.
+- **Sin verificar:** el círculo se revela en barrido, después se trazan las dos líneas de la equis y el sello se asienta como un timbre de "anulado".
 
 **Tamaños:** 48 px en tarjetas (catálogo y comparador), 64 px en la ficha, 40 px en el modal de verificación y 76 px en su confirmación. En tarjetas va siempre dentro del bloque `VerificationStamp`: sello, estado ("Verificado · identidad y tradición") y folio "(ejemplo)", con el mismo texto en todas partes.
 
