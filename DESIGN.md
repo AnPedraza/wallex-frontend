@@ -23,6 +23,18 @@ typography:
     fontWeight: 800
     lineHeight: 1
     letterSpacing: "-0.03em"
+  display-phone:
+    fontFamily: "Schibsted Grotesk, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "2rem"
+    fontWeight: 800
+    lineHeight: 1
+    letterSpacing: "-0.03em"
+  wordmark:
+    fontFamily: "Schibsted Grotesk, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "21px"
+    fontWeight: 800
+    lineHeight: 1
+    letterSpacing: "-0.02em"
   figure:
     fontFamily: "Schibsted Grotesk, ui-sans-serif, system-ui, sans-serif"
     fontSize: "28px"
@@ -168,6 +180,7 @@ Neutros fríos tomados del papel de seguridad, una tinta azul y tres colores de 
 
 ### Hierarchy
 - **Display** (800, 2.375rem en escritorio y 2rem en celular, interlineado 1, -0.03em): el título de cada pantalla.
+- **Wordmark** (800, 21px, -0.02em): "Wallex" como texto junto al logo, en la barra y en el pie.
 - **Figure** (800, 28px, -0.02em): el total del mes de cada inmueble. Es la cifra que manda en la tarjeta.
 - **Title** (700, 17px, -0.01em): nombre del inmueble.
 - **Body** (400, 14–15px): resúmenes, requisitos, textos de filtros.

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import type { Property } from '../types/property';
 import { INITIAL_PROPERTIES, TRANSPORT_PROFILES, calculateTotalMonthlyCost, formatCOP } from '../data/mockProperties';
 import { PropertyDetail } from './PropertyDetail';
@@ -95,6 +95,18 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
   const [showKycModal, setShowKycModal] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [detailProperty, setDetailProperty] = useState<DetailProperty | null>(null);
+  const [overFooter, setOverFooter] = useState(false);
+
+  // La barra del comparador se invierte cuando pasa sobre el pie de página (mismo color tinta)
+  useEffect(() => {
+    const footer = document.querySelector('footer');
+    if (!footer || !('IntersectionObserver' in window)) return;
+    const observer = new IntersectionObserver(([entry]) => setOverFooter(entry.isIntersecting), {
+      rootMargin: '0px 0px -16px 0px',
+    });
+    observer.observe(footer);
+    return () => observer.disconnect();
+  }, []);
 
   const multiplier = TRANSPORT_PROFILES.find((t) => t.id === transportId)?.multiplier ?? 1;
   const zones = useMemo(() => Array.from(new Set(INITIAL_PROPERTIES.map((p) => p.zone))), []);
@@ -307,8 +319,8 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
                     <b className="text-ink">
                       {results.length} {results.length === 1 ? 'inmueble' : 'inmuebles'}
                     </b>{' '}
-                    con la misma ficha · <b className="text-ink">{verifiedCount}</b> con identidad verificada · desde{' '}
-                    <b className="text-ink">{formatCOP(cheapest)}</b> al mes
+                    con la misma ficha, <b className="text-ink">{verifiedCount}</b> con identidad verificada, desde{' '}
+                    <b className="text-ink">{formatCOP(cheapest)}</b> al mes.
                   </>
                 ) : (
                   'Ningún inmueble cumple estos filtros.'
@@ -446,7 +458,11 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
       {/* Barra del comparador */}
       {comparisonIds.length > 0 && onOpenComparer && (
         <div className="fixed bottom-4 inset-x-0 z-30 px-4 flex justify-center pointer-events-none">
-          <div className="pointer-events-auto bg-ink text-white rounded-[10px] pl-5 pr-2 py-2 flex items-center gap-5 ring-1 ring-white/15">
+          <div
+            className={`pointer-events-auto rounded-[10px] pl-5 pr-2 py-2 flex items-center gap-5 ring-1 transition-colors duration-200 ${
+              overFooter ? 'bg-surface text-ink ring-rule' : 'bg-ink text-white ring-white/15'
+            }`}
+          >
             <p className="text-sm">
               <b>
                 {comparisonIds.length} de 3
@@ -456,7 +472,9 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
             <button
               type="button"
               onClick={onOpenComparer}
-              className="bg-surface text-ink font-semibold text-sm px-4 py-2 rounded-lg hover:bg-paper focus-visible:outline-white"
+              className={`font-semibold text-sm px-4 py-2 rounded-lg transition-colors duration-200 ${
+                overFooter ? 'bg-ink text-white hover:bg-ink-hover' : 'bg-surface text-ink hover:bg-paper focus-visible:outline-white'
+              }`}
             >
               Abrir comparador
             </button>
