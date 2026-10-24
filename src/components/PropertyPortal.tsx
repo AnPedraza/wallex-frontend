@@ -4,6 +4,7 @@ import { INITIAL_PROPERTIES, TRANSPORT_PROFILES, calculateTotalMonthlyCost, form
 import { PropertyDetail } from './PropertyDetail';
 import { FolioSeal, type SealStatus } from './FolioSeal';
 import type { Property as DetailProperty } from '../data/properties';
+import { sampleFolio } from '../data/folio';
 
 interface PropertyPortalProps {
   comparisonIds?: string[];
@@ -37,13 +38,7 @@ const SEAL_TEXT: Record<SealStatus, { title: string; detail: string; className: 
   unverified: { title: 'Sin verificar', detail: 'quien publica no ha mostrado su identidad', className: 'text-unverified' },
 };
 
-// Número de folio de ejemplo, estable por inmueble (no es una matrícula real)
-const sampleFolio = (p: Property) => {
-  let h = 0;
-  for (const ch of p.id + p.title) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  const office = p.zone === 'Cedritos' ? '50N' : '50C';
-  return `${office}-${String(1_000_000 + (h % 8_999_999))}`;
-};
+const folioOf = (p: Property) => sampleFolio(p.id, p.title, p.zone);
 
 const toDetail = (property: Property): DetailProperty => ({
   ...property,
@@ -94,7 +89,7 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [showKycModal, setShowKycModal] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
-  const [detailProperty, setDetailProperty] = useState<DetailProperty | null>(null);
+  const [detail, setDetail] = useState<{ property: DetailProperty; transport: number; folio: string | null } | null>(null);
   const [overFooter, setOverFooter] = useState(false);
 
   // La barra del comparador se invierte cuando pasa sobre el pie de página (mismo color tinta)
@@ -164,7 +159,7 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
   };
 
   const handleContactFromDetail = (property: DetailProperty) => {
-    setDetailProperty(null);
+    setDetail(null);
     const matched = INITIAL_PROPERTIES.find((p) => p.id === property.id);
     if (matched) handleContact(matched);
   };
@@ -358,7 +353,8 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
                 const status = sealStatus(property);
                 const seal = SEAL_TEXT[status];
                 const req = property.requirements;
-                const openDetail = () => setDetailProperty(toDetail(property));
+                const openDetail = () =>
+                  setDetail({ property: toDetail(property), transport, folio: property.verified ? folioOf(property) : null });
 
                 return (
                   <li key={property.id} className="bg-surface border border-rule rounded-[10px] overflow-hidden flex flex-col">
@@ -426,7 +422,7 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
                         <span className={`font-bold ${seal.className}`}>{seal.title}</span> · {seal.detail}
                         <br />
                         <span className="text-ink-faint">
-                          {property.verified ? `Folio ${sampleFolio(property)} (ejemplo)` : 'Sin folio registrado'}
+                          {property.verified ? `Folio ${folioOf(property)} (ejemplo)` : 'Sin folio registrado'}
                         </span>
                       </p>
                     </div>
@@ -482,8 +478,14 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
         </div>
       )}
 
-      {detailProperty && (
-        <PropertyDetail property={detailProperty} onClose={() => setDetailProperty(null)} onContact={handleContactFromDetail} />
+      {detail && (
+        <PropertyDetail
+          property={detail.property}
+          transport={{ amount: detail.transport, label: TRANSPORT_LABELS[transportId] ?? 'Transporte estimado' }}
+          folio={detail.folio}
+          onClose={() => setDetail(null)}
+          onContact={handleContactFromDetail}
+        />
       )}
 
       {/* KYC de respaldo, solo si quien integra no pasa onContactProperty */}

@@ -1,19 +1,28 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { monthlyTotal, type Property } from '../data/properties';
 import { PropertyBadge } from './PropertyBadge';
+import { FolioSeal, type SealStatus } from './FolioSeal';
 
 interface PropertyDetailProps {
   property: Property;
   onClose: () => void;
   onContact: (property: Property) => void;
+  // Transporte estimado con el perfil elegido en los filtros; así el total coincide con la tarjeta
+  transport?: { amount: number; label: string };
+  folio?: string | null;
 }
 
-const cop = (value: number) => `$${value.toLocaleString('es-CO')}`;
+const cop = (value: number) => `$ ${value.toLocaleString('es-CO')}`;
 
-const focusRing = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2B1B17]';
 const SWIPE_MIN_PX = 50;
 
-export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, onClose, onContact }) => {
+const Chevron: React.FC<{ dir: 'left' | 'right' }> = ({ dir }) => (
+  <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+    <path d={dir === 'left' ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7'} />
+  </svg>
+);
+
+export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, onClose, onContact, transport, folio = null }) => {
   const [current, setCurrent] = useState(0);
   const closeRef = useRef<HTMLButtonElement>(null);
   const touchStartX = useRef<number | null>(null);
@@ -55,208 +64,186 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, onClos
   };
 
   const titleId = `property-detail-${property.id}`;
+  const status: SealStatus = !property.verified ? 'unverified' : property.certified ? 'verified' : 'pending';
+  const monthTotal = monthlyTotal(property) + (transport?.amount ?? 0);
+  const roundBtn =
+    'size-10 flex items-center justify-center rounded-full bg-surface text-ink hover:bg-paper transition-colors';
 
   return (
     <div
       onClick={(e) => e.target === e.currentTarget && onClose()}
-      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4"
+      className="fixed inset-0 z-50 bg-ink/55 flex items-end sm:items-center justify-center sm:p-6"
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative bg-white w-full max-w-3xl h-[100dvh] sm:h-auto sm:max-h-[90vh] sm:rounded-3xl shadow-2xl border border-[#EAE4DC] flex flex-col overflow-hidden"
+        className="relative bg-surface w-full max-w-6xl h-[100dvh] sm:h-auto sm:max-h-[92vh] sm:rounded-[10px] border border-rule flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden"
       >
         <button
           ref={closeRef}
           type="button"
           onClick={onClose}
           aria-label="Cerrar ficha"
-          className={`absolute top-3 right-3 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-white/90 text-[#2B1B17] shadow hover:bg-white ${focusRing}`}
+          className={`fixed sm:absolute top-3 right-3 z-20 ${roundBtn} border border-rule`}
         >
-          ✕
+          <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
         </button>
 
-        <div className="flex-1 overflow-y-auto">
-          {/* Galería */}
-          <div className="bg-[#F8F5F0]">
-            <div
-              className="relative aspect-[4/3] sm:aspect-[16/9] w-full bg-gray-200 select-none"
-              onTouchStart={(e) => {
-                touchStartX.current = e.touches[0].clientX;
-              }}
-              onTouchEnd={handleTouchEnd}
-            >
-              <img
-                src={property.images[current]}
-                alt={`${property.title}, foto ${current + 1} de ${total}`}
-                className="w-full h-full object-cover"
-                draggable={false}
-              />
-              {total > 1 && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => goTo(current - 1)}
-                    aria-label="Foto anterior"
-                    className={`absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/90 text-[#2B1B17] shadow hover:bg-white text-lg ${focusRing}`}
-                  >
-                    ‹
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => goTo(current + 1)}
-                    aria-label="Foto siguiente"
-                    className={`absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/90 text-[#2B1B17] shadow hover:bg-white text-lg ${focusRing}`}
-                  >
-                    ›
-                  </button>
-                </>
-              )}
-              <span
-                aria-live="polite"
-                className="absolute bottom-3 right-3 bg-[#2B1B17]/80 text-white text-xs font-semibold px-3 py-1 rounded-full"
-              >
-                {current + 1} / {total}
-              </span>
-            </div>
-
+        {/* Galería: arriba en celular, columna izquierda en escritorio */}
+        <div className="bg-paper lg:w-[56%] lg:flex lg:flex-col shrink-0">
+          <div
+            className="relative aspect-[4/3] lg:aspect-auto lg:flex-1 w-full bg-rule select-none"
+            onTouchStart={(e) => {
+              touchStartX.current = e.touches[0].clientX;
+            }}
+            onTouchEnd={handleTouchEnd}
+          >
+            <img
+              src={property.images[current]}
+              alt={`${property.title}, foto ${current + 1} de ${total}`}
+              className="absolute inset-0 size-full object-cover"
+              draggable={false}
+            />
             {total > 1 && (
-              <div className="flex gap-2 p-3 overflow-x-auto">
-                {property.images.map((src, index) => (
-                  <button
-                    key={src}
-                    type="button"
-                    onClick={() => setCurrent(index)}
-                    aria-label={`Ver foto ${index + 1}`}
-                    aria-current={index === current}
-                    className={`shrink-0 w-16 h-12 rounded-lg overflow-hidden border-2 ${focusRing} ${
-                      index === current ? 'border-[#2B1B17]' : 'border-transparent opacity-70 hover:opacity-100'
-                    }`}
-                  >
-                    <img src={src} alt="" className="w-full h-full object-cover" />
-                  </button>
-                ))}
-              </div>
+              <>
+                <button type="button" onClick={() => goTo(current - 1)} aria-label="Foto anterior" className={`absolute left-3 top-1/2 -translate-y-1/2 ${roundBtn}`}>
+                  <Chevron dir="left" />
+                </button>
+                <button type="button" onClick={() => goTo(current + 1)} aria-label="Foto siguiente" className={`absolute right-3 top-1/2 -translate-y-1/2 ${roundBtn}`}>
+                  <Chevron dir="right" />
+                </button>
+              </>
             )}
+            <span aria-live="polite" className="absolute bottom-3 left-3 bg-ink text-white text-xs font-semibold px-2.5 py-1 rounded-md">
+              Foto {current + 1} de {total}
+            </span>
           </div>
 
-          <div className="p-5 sm:p-6 space-y-6">
-            {/* Encabezado */}
-            <div className="space-y-3">
-              <div>
-                <span className="text-xs font-semibold text-[#8C5E3C]">{property.location}</span>
-                <h2 id={titleId} className="text-2xl font-bold text-[#2B1B17] mt-1">
-                  {property.title}
-                </h2>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                {property.verified ? (
-                  <span className="bg-[#2B1B17] text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-                    ✓ Propietario verificado
-                  </span>
-                ) : (
-                  <span className="bg-[#EAE4DC] text-[#4A3E39] text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-                    Propietario sin verificar
-                  </span>
-                )}
-                <PropertyBadge isVerified={property.certified} />
-              </div>
+          {total > 1 && (
+            <div className="flex gap-2 p-3 overflow-x-auto">
+              {property.images.map((src, index) => (
+                <button
+                  key={src}
+                  type="button"
+                  onClick={() => setCurrent(index)}
+                  aria-label={`Ver foto ${index + 1}`}
+                  aria-current={index === current}
+                  className={`shrink-0 w-16 h-12 rounded-md overflow-hidden border-2 ${
+                    index === current ? 'border-ink' : 'border-transparent opacity-70 hover:opacity-100'
+                  }`}
+                >
+                  <img src={src} alt="" className="size-full object-cover" />
+                </button>
+              ))}
             </div>
+          )}
+        </div>
 
-            {/* Costos */}
-            <section aria-labelledby={`${titleId}-costs`} className="space-y-3">
-              <h3 id={`${titleId}-costs`} className="text-lg font-bold text-[#2B1B17]">
-                Lo que pagas
+        {/* El folio: datos en orden fijo y el contacto siempre a la vista */}
+        <div className="flex-1 lg:min-h-0 flex flex-col">
+          <div className="flex-1 lg:overflow-y-auto px-5 sm:px-7 pt-6 pb-6 space-y-7">
+            <header className="pr-12">
+              <p className="text-[13px] text-ink-soft">{property.location}</p>
+              <h2 id={titleId} className="text-[28px] font-extrabold tracking-[-0.02em] leading-tight mt-1">
+                {property.title}
+              </h2>
+              <p className="text-sm text-ink-soft mt-2">
+                {property.area} m² · {property.bedrooms} {property.bedrooms === 1 ? 'habitación' : 'habitaciones'} · {property.bathrooms}{' '}
+                {property.bathrooms === 1 ? 'baño' : 'baños'}
+              </p>
+            </header>
+
+            <section aria-label="Verificación" className="flex items-center gap-4 border-y border-rule py-4">
+              <FolioSeal seed={property.id} status={status} size={64} />
+              <div className="text-sm space-y-1.5 min-w-0">
+                <p className={`font-semibold ${property.verified ? 'text-verified' : 'text-unverified'}`}>
+                  {property.verified ? 'Identidad de quien publica verificada' : 'Quien publica no ha verificado su identidad'}
+                </p>
+                <PropertyBadge isVerified={property.certified} />
+                <p className="text-[12.5px] text-ink-faint">{folio ? `Folio ${folio} (ejemplo)` : 'Sin folio registrado'}</p>
+              </div>
+            </section>
+
+            <section aria-labelledby={`${titleId}-costs`}>
+              <h3 id={`${titleId}-costs`} className="text-base font-bold">
+                Lo que pagas cada mes
               </h3>
-              <dl className="bg-[#F8F5F0] border border-[#EAE4DC] rounded-2xl p-4 space-y-2 text-sm">
-                <div className="flex justify-between gap-4">
-                  <dt className="text-[#6E615A]">Canon mensual</dt>
-                  <dd className="font-semibold text-[#2B1B17]">{cop(property.price)}</dd>
+              <dl className="mt-3 text-sm">
+                <div className="flex justify-between gap-4 py-1.5">
+                  <dt className="text-ink-soft">Canon</dt>
+                  <dd className="font-semibold">{cop(property.price)}</dd>
                 </div>
-                <div className="flex justify-between gap-4">
-                  <dt className="text-[#6E615A]">Administración</dt>
-                  <dd className="font-semibold text-[#2B1B17]">{cop(property.adminFee)}</dd>
+                <div className="flex justify-between gap-4 py-1.5">
+                  <dt className="text-ink-soft">Administración</dt>
+                  <dd className="font-semibold">{cop(property.adminFee)}</dd>
                 </div>
-                <div className="flex justify-between items-baseline gap-4 border-t border-[#EAE4DC] pt-3">
-                  <dt className="font-bold text-[#2B1B17]">Total mensual</dt>
-                  <dd className="text-2xl font-extrabold text-[#2B1B17]">{cop(monthlyTotal(property))}</dd>
+                {transport && (
+                  <div className="flex justify-between gap-4 py-1.5">
+                    <dt className="text-ink-soft">
+                      Transporte estimado
+                      <span className="block text-[12.5px] text-ink-faint">{transport.label}</span>
+                    </dt>
+                    <dd className="font-semibold">{cop(transport.amount)}</dd>
+                  </div>
+                )}
+                <div className="flex justify-between items-baseline gap-4 border-t border-ink mt-2 pt-3">
+                  <dt className="font-bold">Total del mes</dt>
+                  <dd className="text-[2rem] font-extrabold tracking-[-0.02em] leading-none">{cop(monthTotal)}</dd>
                 </div>
-                <div className="flex justify-between gap-4 border-t border-[#EAE4DC] pt-3">
-                  <dt className="text-[#6E615A]">Depósito (una sola vez)</dt>
-                  <dd className="font-semibold text-[#2B1B17]">
-                    {property.deposit === 0 ? 'Sin depósito' : cop(property.deposit)}
-                  </dd>
+                <div className="flex justify-between gap-4 py-1.5 mt-3 text-ink-soft">
+                  <dt>Depósito, una sola vez</dt>
+                  <dd className="font-semibold text-ink">{property.deposit === 0 ? 'Sin depósito' : cop(property.deposit)}</dd>
                 </div>
               </dl>
             </section>
 
-            {/* Características */}
-            <section aria-label="Características" className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-medium text-[#4A3E39]">
-              <span>📐 {property.area} m²</span>
-              <span>🛏️ {property.bedrooms} {property.bedrooms === 1 ? 'habitación' : 'habitaciones'}</span>
-              <span>🚿 {property.bathrooms} {property.bathrooms === 1 ? 'baño' : 'baños'}</span>
-            </section>
-
-            {/* Requisitos */}
-            <section aria-labelledby={`${titleId}-reqs`} className="space-y-3">
-              <div>
-                <h3 id={`${titleId}-reqs`} className="text-lg font-bold text-[#2B1B17]">
-                  Requisitos del arrendador
-                </h3>
-                <p className="text-sm text-[#6E615A]">
-                  Conoce los requisitos antes de contactar al propietario.
-                </p>
-              </div>
-
-              {!property.requiresCoSigner && (
-                <p className="bg-[#2F7A5B]/10 border border-[#2F7A5B]/30 text-[#2F7A5B] p-3 rounded-xl text-sm font-semibold">
-                  ✓ No te piden codeudor
-                </p>
-              )}
-
-              <ul className="space-y-2">
+            <section aria-labelledby={`${titleId}-reqs`}>
+              <h3 id={`${titleId}-reqs`} className="text-base font-bold">
+                Requisitos del arrendador
+              </h3>
+              <p className="text-sm text-ink-soft mt-1">Conócelos antes de contactar a quien publica.</p>
+              <ul className="mt-3 divide-y divide-rule border-y border-rule">
                 {property.requirements.map((req) => (
-                  <li key={req.label} className="border border-[#EAE4DC] rounded-xl p-3 flex items-start justify-between gap-3">
+                  <li key={req.label} className="py-3 flex items-start justify-between gap-4">
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-[#2B1B17]">{req.label}</p>
-                      {req.detail && <p className="text-xs text-[#6E615A] mt-0.5">{req.detail}</p>}
+                      <p className="text-sm font-semibold">{req.label}</p>
+                      {req.detail && <p className="text-[13px] text-ink-soft mt-0.5">{req.detail}</p>}
                     </div>
-                    <span
-                      className={`shrink-0 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${
-                        req.required ? 'bg-[#B3453A]/10 text-[#B3453A]' : 'bg-[#EAE4DC] text-[#4A3E39]'
-                      }`}
-                    >
-                      {req.required ? 'Obligatorio' : 'Opcional'}
+                    <span className={`shrink-0 text-[13px] font-semibold ${req.required ? 'text-ink' : 'text-verified'}`}>
+                      {req.required ? 'Te lo piden' : 'No te lo piden'}
                     </span>
                   </li>
                 ))}
               </ul>
             </section>
 
-            {/* Descripción */}
-            <section aria-labelledby={`${titleId}-desc`} className="space-y-2">
-              <h3 id={`${titleId}-desc`} className="text-lg font-bold text-[#2B1B17]">
+            <section aria-labelledby={`${titleId}-desc`}>
+              <h3 id={`${titleId}-desc`} className="text-base font-bold">
                 Descripción
               </h3>
-              <p className="text-sm text-[#4A3E39] leading-relaxed">{property.description}</p>
+              <p className="text-sm text-ink-soft leading-relaxed mt-2 max-w-[65ch]">{property.description}</p>
             </section>
           </div>
-        </div>
 
-        {/* Pie fijo: el botón de contacto siempre queda a la vista */}
-        <div className="shrink-0 border-t border-[#EAE4DC] bg-white p-4 flex items-center gap-4">
-          <div className="hidden sm:block">
-            <p className="text-xs text-[#6E615A]">Total mensual</p>
-            <p className="text-lg font-extrabold text-[#2B1B17]">{cop(monthlyTotal(property))}</p>
+          <div className="sticky bottom-0 lg:static shrink-0 border-t border-rule bg-surface px-5 sm:px-7 py-4 flex items-center gap-5">
+            <div className="hidden sm:block">
+              <p className="text-[12.5px] text-ink-soft">Total del mes</p>
+              <p className="text-lg font-extrabold tracking-[-0.01em]">{cop(monthTotal)}</p>
+            </div>
+            <div className="flex-1">
+              <button
+                type="button"
+                onClick={() => onContact(property)}
+                className="w-full bg-ink text-white font-semibold py-3 rounded-lg hover:bg-ink-hover transition-colors text-sm"
+              >
+                Contactar a quien publica
+              </button>
+              <p className="text-xs text-ink-faint mt-1.5 text-center">Antes de compartir el contacto verificamos tu identidad.</p>
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={() => onContact(property)}
-            className={`flex-1 bg-[#2B1B17] text-white font-semibold py-3 rounded-xl hover:bg-[#4A3E39] transition-colors text-sm focus-visible:ring-offset-2 ${focusRing}`}
-          >
-            Contactar al propietario
-          </button>
         </div>
       </div>
     </div>

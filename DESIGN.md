@@ -245,6 +245,16 @@ La roseta de guilloche (`FolioSeal`), de 48 px. Se genera desde el id del inmueb
 
 La versión verificada se dibuja trazo a trazo la primera vez que entra en pantalla y queda quieta con `prefers-reduced-motion`. Va siempre con el texto de lo que se verificó y el número de folio en letra pequeña, marcado "(ejemplo)" mientras los datos sean de prueba.
 
+### Ficha del inmueble
+Capa sobre el catálogo con fondo en tinta al 55 %, sin blur.
+- **En escritorio:** dos columnas, con la foto a la izquierda (56 %) y el folio a la derecha con scroll propio.
+- **En celular:** una sola hoja de alto completo en la que la foto sube con el contenido.
+
+El orden de la columna del folio es fijo: lugar, título (28 px, 800), metadatos, bloque de verificación entre filetes (sello de 64 px, identidad, certificado y folio), "Lo que pagas cada mes" como lista de valores alineados a la derecha, requisitos en filas separadas por filetes y descripción.
+- **Total del mes:** va a 2rem, sobre un filete en tinta. Es el mismo total de la tarjeta, con el mismo perfil de transporte.
+- **Requisitos:** dicen "Te lo piden" en tinta o "No te lo piden" en verde, sin píldoras.
+- **Contacto:** el pie con el total y "Contactar a quien publica" siempre queda a la vista, con una línea que avisa que antes se verifica la identidad.
+
 ### Comparar (toggle)
 Botón sobre la foto, arriba a la derecha. Lleva una casilla dibujada y el texto "Comparar". Activo, pasa a fondo tinta con "En comparador" y usa `aria-pressed`.
 
