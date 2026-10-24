@@ -63,6 +63,7 @@ typography:
     fontWeight: 400
     lineHeight: 1.375
 rounded:
+  track: "2px"
   check: "3px"
   control: "8px"
   surface: "10px"
@@ -209,7 +210,7 @@ Sistema plano. Ninguna superficie lleva sombra: la profundidad viene del contras
 
 ## Shapes
 
-Formas de documento: rectángulos con esquinas apenas redondeadas. 10 px en tarjetas y paneles, 8 px en botones, campos y el botón "Comparar", 3 px en casillas, y redondo solo en el contador de la barra y en el interruptor. Las fotos llenan el ancho de la tarjeta en proporción 16:10, recortadas por la esquina de la tarjeta.
+Formas de documento: rectángulos con esquinas apenas redondeadas. 10 px en tarjetas y paneles, 8 px en botones, campos y el botón "Comparar", 3 px en casillas, 2 px en rieles y barras de datos (control deslizante, histograma y desglose del comparador), y redondo solo en el contador de la barra y en el interruptor. Las fotos llenan el ancho de la tarjeta en proporción 16:10, recortadas por la esquina de la tarjeta.
 
 ## Components
 
@@ -238,12 +239,14 @@ Formas de documento: rectángulos con esquinas apenas redondeadas. 10 px en tarj
 Un `input range` nativo con riel de 4 px (tinta hasta el valor, filete después) y perilla blanca de 26 px con borde en tinta y una mini roseta verde adentro. Encima lleva un histograma de barras en tinta con cuántos inmuebles hay en cada tramo de $ 250.000; las barras por encima del tope se apagan. Al arrastrar, la perilla gira un poco.
 
 ### Sello de folio (signature)
-La roseta de guilloche (`FolioSeal`), de 48 px. Se genera desde el id del inmueble, así que cada uno tiene la suya y siempre la misma. Tiene tres estados:
-- **Verificado:** elipses en verde con un centro en tinta.
-- **Pendiente:** elipses punteadas en ámbar.
+La roseta de guilloche (`FolioSeal`) siempre tiene la misma estructura: tres bandas onduladas entrelazadas, un anillo interior de dos curvas y un punto central. Lo que cambia según el id del inmueble es poco: el número de ondas (10 a 13 afuera y 6 a 8 adentro) y el giro. Así cada inmueble tiene la suya y todas se ven de la misma familia.
+- **Verificado:** bandas en verde y anillo en tinta.
+- **Pendiente:** el mismo dibujo, punteado y en ámbar.
 - **Sin verificar:** círculo punteado en rojo con una equis.
 
-La versión verificada se dibuja trazo a trazo la primera vez que entra en pantalla y queda quieta con `prefers-reduced-motion`. Va siempre con el texto de lo que se verificó y el número de folio en letra pequeña, marcado "(ejemplo)" mientras los datos sean de prueba.
+**Animación:** la roseta verificada aparece primero como marca de agua al 18 % y luego la tinta se imprime encima, curva por curva, escalonadas cada 110 ms. Cada curva se anima según su longitud real, así que todas terminan igual de suaves. Ocurre una sola vez, al entrar en pantalla, y no ocurre con `prefers-reduced-motion`.
+
+**Tamaños:** 48 px en tarjetas (catálogo y comparador), 64 px en la ficha, 40 px en el modal de verificación y 76 px en su confirmación. En tarjetas va siempre dentro del bloque `VerificationStamp`: sello, estado ("Verificado · identidad y tradición") y folio "(ejemplo)", con el mismo texto en todas partes.
 
 ### Ficha del inmueble
 Capa sobre el catálogo con fondo en tinta al 55 %, sin blur.

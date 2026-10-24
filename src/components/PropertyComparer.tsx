@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import type { Property, TransportProfile } from '../types/property';
 import { TRANSPORT_PROFILES, calculatePricePerM2, formatCOP } from '../data/mockProperties';
-import { FolioSeal, type SealStatus } from './FolioSeal';
+import { VerificationStamp, type SealStatus } from './FolioSeal';
+import { sampleFolio } from '../data/folio';
 import { TRANSPORT_LABELS } from '../data/transportLabels';
 
 interface PropertyComparerProps {
@@ -374,13 +375,12 @@ export const PropertyComparer: React.FC<PropertyComparerProps> = ({
                         </div>
                       </dl>
 
-                      <div className="flex items-center gap-3 mt-4 pt-3 border-t border-rule">
-                        <FolioSeal seed={property.id} status={status} size={40} />
-                        <p className="text-[12.5px] leading-snug">
-                          {status === 'verified' && <span className="font-bold text-verified">Identidad y tradición verificadas</span>}
-                          {status === 'pending' && <span className="font-bold text-pending">Identidad verificada, tradición pendiente</span>}
-                          {status === 'unverified' && <span className="font-bold text-unverified">Quien publica no está verificado</span>}
-                        </p>
+                      <div className="mt-4 pt-3 border-t border-rule">
+                        <VerificationStamp
+                          seed={property.id}
+                          status={status}
+                          folio={property.verified ? sampleFolio(property.id, property.title, property.zone) : null}
+                        />
                       </div>
 
                       <button

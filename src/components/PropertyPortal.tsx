@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import type { Property } from '../types/property';
 import { INITIAL_PROPERTIES, TRANSPORT_PROFILES, calculateTotalMonthlyCost, formatCOP } from '../data/mockProperties';
 import { PropertyDetail } from './PropertyDetail';
-import { FolioSeal, type SealStatus } from './FolioSeal';
+import { VerificationStamp, type SealStatus } from './FolioSeal';
 import type { Property as DetailProperty } from '../data/properties';
 import { sampleFolio } from '../data/folio';
 import { TRANSPORT_LABELS } from '../data/transportLabels';
@@ -28,12 +28,6 @@ const BIN_SIZE = 250_000;
 const num = (value: number) => value.toLocaleString('es-CO');
 
 const sealStatus = (p: Property): SealStatus => (!p.verified ? 'unverified' : p.certified ? 'verified' : 'pending');
-
-const SEAL_TEXT: Record<SealStatus, { title: string; detail: string; className: string }> = {
-  verified: { title: 'Verificado', detail: 'identidad y tradición', className: 'text-verified' },
-  pending: { title: 'Tradición pendiente de cotejo', detail: 'identidad verificada', className: 'text-pending' },
-  unverified: { title: 'Sin verificar', detail: 'quien publica no ha mostrado su identidad', className: 'text-unverified' },
-};
 
 const folioOf = (p: Property) => sampleFolio(p.id, p.title, p.zone);
 
@@ -352,7 +346,6 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
               {results.map(({ property, transport, total }) => {
                 const inCompare = comparisonIds.includes(property.id);
                 const status = sealStatus(property);
-                const seal = SEAL_TEXT[status];
                 const req = property.requirements;
                 const openDetail = () =>
                   setDetail({ property: toDetail(property), transport, folio: property.verified ? folioOf(property) : null });
@@ -417,15 +410,8 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-3 px-4 py-2.5 border-t border-rule">
-                      <FolioSeal seed={property.id} status={status} />
-                      <p className="text-[12.5px] leading-snug">
-                        <span className={`font-bold ${seal.className}`}>{seal.title}</span> · {seal.detail}
-                        <br />
-                        <span className="text-ink-faint">
-                          {property.verified ? `Folio ${folioOf(property)} (ejemplo)` : 'Sin folio registrado'}
-                        </span>
-                      </p>
+                    <div className="px-4 py-2.5 border-t border-rule">
+                      <VerificationStamp seed={property.id} status={status} folio={property.verified ? folioOf(property) : null} />
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 px-4 pb-4">
