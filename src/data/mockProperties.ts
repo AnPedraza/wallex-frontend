@@ -3,19 +3,19 @@ import type { Property, TransportProfile } from '../types/property';
 export const TRANSPORT_PROFILES: TransportProfile[] = [
   {
     id: 'standard',
-    name: 'Uso Diario TransMilenio / SITP',
-    description: '2 trayectos al día, 22 días hábiles (Tarifa Bogotá $3.550/pasaje)',
+    name: 'Uso diario de TransMilenio o SITP',
+    description: '2 trayectos al día, 22 días hábiles (tarifa en Bogotá: $3.550 por pasaje)',
     multiplier: 1.0,
   },
   {
     id: 'hybrid',
-    name: 'Modalidad Híbrida / Bici',
+    name: 'Bici y transporte público',
     description: 'Alternancia de ciclorruta y transporte público 3 días por semana',
     multiplier: 0.6,
   },
   {
     id: 'intensive',
-    name: 'Movilidad Alta / Transbordos',
+    name: 'Muchos trayectos y transbordos',
     description: 'Trayectos interzonales frecuentes o combinación de SITP + alimentación',
     multiplier: 1.35,
   },
@@ -80,7 +80,7 @@ export const INITIAL_PROPERTIES: Property[] = [
   },
   {
     id: '3',
-    title: 'Apto Moderno en Cedritos',
+    title: 'Apto moderno en Cedritos',
     location: 'Cedritos, Bogotá',
     zone: 'Cedritos',
     price: 1650000,
@@ -122,7 +122,7 @@ export const INITIAL_PROPERTIES: Property[] = [
     stratum: 4,
     verified: false,
     certified: false,
-    ownerName: 'Anuncio Particular (Sin verificar)',
+    ownerName: 'Anuncio particular (sin verificar)',
     image: 'https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=800&q=80',
     requirements: {
       guarantorRequired: true,
@@ -164,7 +164,7 @@ export const INITIAL_PROPERTIES: Property[] = [
   },
   {
     id: '6',
-    title: 'Apartamento Familiar en Salitre Oriental',
+    title: 'Apartamento familiar en Salitre Oriental',
     location: 'Salitre Oriental, Bogotá',
     zone: 'Teusaquillo',
     price: 2450000,
