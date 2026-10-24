@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { AuthForm, SESSION_KEY } from './components/AuthForm';
+import { ContactVerification } from './components/ContactVerification';
 import { Footer } from './components/Footer';
 import { Navbar } from './components/Navbar';
 import type { NavLink } from './components/Navbar';
@@ -121,7 +122,7 @@ export default function App() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F8F5F0]">
+    <div className="min-h-screen flex flex-col bg-paper">
       <Navbar
         user={user}
         onLogout={handleLogout}
@@ -162,79 +163,14 @@ export default function App() {
 
       <Footer />
 
-      {/* Modal KYC unificado para contacto */}
-      {contactingProperty && (
-        <div
-          onClick={(e) => e.target === e.currentTarget && setContactingProperty(null)}
-          className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 z-50"
-        >
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-[#EAE4DC] space-y-5 relative">
-            <button
-              type="button"
-              onClick={() => setContactingProperty(null)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 w-8 h-8 rounded-full flex items-center justify-center"
-              aria-label="Cerrar"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-
-            <div className="text-center space-y-2">
-              <div className="w-12 h-12 bg-[#F8F5F0] text-[#2B1B17] rounded-full flex items-center justify-center mx-auto">
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-[#2B1B17]">
-                Verificación KYC para Contactar
-              </h3>
-              <p className="text-xs text-[#6E615A]">
-                Para protegerte ante posibles fraudes y garantizar la seguridad del arrendador, Wallex valida tu identidad antes de compartir datos directos para{' '}
-                <strong className="text-[#2B1B17]">{contactingProperty.title}</strong> ({contactingProperty.location}).
-              </p>
-            </div>
-
-            <div className="space-y-3 bg-[#F8F5F0] p-4 rounded-2xl border border-[#EAE4DC] text-xs">
-              <div className="flex items-center gap-2 text-[#2B1B17] font-semibold">
-                <svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-                <span>Cédula de Ciudadanía cargada</span>
-              </div>
-              <div className="flex items-center gap-2 text-[#2B1B17] font-semibold">
-                <svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-                <span>Verificación biométrica facial</span>
-              </div>
-              <div className="flex items-center gap-2 text-[#2B1B17] font-semibold">
-                <svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-                <span>Autorización Habeas Data (Ley 1581 de 2012)</span>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => {
-                alert(`¡Verificación KYC aprobada! Los datos de contacto directo de ${contactingProperty.ownerName} han sido enviados a tu correo registrado.`);
-                setContactingProperty(null);
-              }}
-              className="w-full bg-[#2B1B17] text-white font-bold py-3 rounded-xl hover:bg-[#4A3E39] transition-colors text-sm shadow-md"
-            >
-              Completar y Contactar Arrendador
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Verificación al contactar (simulada y declarada como tal) */}
+      {contactingProperty && <ContactVerification property={contactingProperty} onClose={() => setContactingProperty(null)} />}
 
       {/* Modal Auth */}
       {authOpen && (
         <div
           onClick={(e) => e.target === e.currentTarget && closeAuth()}
-          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+          className="fixed inset-0 z-50 bg-ink/55 flex items-center justify-center p-4 overflow-y-auto"
         >
           <div
             ref={modalRef}
@@ -253,7 +189,7 @@ export default function App() {
               type="button"
               onClick={closeAuth}
               aria-label="Cerrar"
-              className="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full text-[#6E615A] hover:bg-[#EAE4DC] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2B1B17]"
+              className="absolute top-4 right-4 size-9 flex items-center justify-center rounded-full border border-rule text-ink hover:bg-paper"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />

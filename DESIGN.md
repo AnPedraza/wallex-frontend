@@ -261,6 +261,13 @@ El orden de la columna del folio es fijo: lugar, título (28 px, 800), metadatos
 - **Opciones:** una tarjeta por inmueble con su total del mes (28 px) y la diferencia frente a la más barata. Debajo va la **barra de desglose a la misma escala** que el total más alto: canon en tinta, administración en tinta suave y transporte en borde de control, y una sola leyenda arriba. Después vienen el sello, el estado de verificación y "Contactar a quien publica". La más barata se marca con borde en tinta, no en verde.
 - **Tabla punto por punto:** primera columna fija, filas en orden fijo y secciones (Dinero, Confianza, Requisitos, El inmueble) separadas por un filete en tinta. El menor valor se marca con la palabra "Menor" subrayada en tinta. Solo el estado de verificación usa verde, ámbar o rojo.
 
+### Verificación al contactar
+Modal de dos pasos (`ContactVerification`), con fondo en tinta al 55 %:
+1. **Explicación y autorización.** Dice qué se pedirá (cédula por ambos lados y una selfie, con íconos de trazo) y el estado de quien publica con su sello. Si quien publica no está verificado, advierte que no se consigne dinero antes de ver el inmueble. Lleva la casilla de autorización de la Ley 1581, y el botón "Verificar mi identidad" queda deshabilitado (45 % de opacidad) hasta marcarla.
+2. **Confirmación.** Muestra el sello verificado a 76 px y dice que es una simulación y que no se envía ningún correo.
+
+La regla que manda: la pantalla nunca afirma algo que el prototipo no hace.
+
 ### Comparar (toggle)
 Botón sobre la foto, arriba a la derecha. Lleva una casilla dibujada y el texto "Comparar". Activo, pasa a fondo tinta con "En comparador" y usa `aria-pressed`.
 
