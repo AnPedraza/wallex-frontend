@@ -32,6 +32,8 @@ export default function App() {
   const [currentHash, setCurrentHash] = useState(() => window.location.hash || '#buscar');
   const [comparisonIds, setComparisonIds] = useState<string[]>(['1', '3']); // Inicialmente 2 propiedades (Chapinero Alto vs Cedritos)
   const [contactingProperty, setContactingProperty] = useState<Property | null>(null);
+  // Perfil de transporte compartido: el total del mes es el mismo en catálogo, ficha y comparador
+  const [transportProfileId, setTransportProfileId] = useState('standard');
   const modalRef = useRef<HTMLDivElement>(null);
 
   // Escuchar cambios de hash para navegación (#buscar o #comparar)
@@ -130,6 +132,8 @@ export default function App() {
       <main className="flex-1">
         {currentHash === '#comparar' ? (
           <PropertyComparer
+            transportProfileId={transportProfileId}
+            onTransportProfileChange={setTransportProfileId}
             properties={comparedProperties}
             availableProperties={INITIAL_PROPERTIES}
             onRemoveProperty={handleRemoveFromComparison}
@@ -143,6 +147,8 @@ export default function App() {
         ) : (
           <div id="buscar" className="scroll-mt-16">
             <PropertyPortal
+              transportProfileId={transportProfileId}
+              onTransportProfileChange={setTransportProfileId}
               comparisonIds={comparisonIds}
               onToggleComparison={handleToggleComparison}
               onOpenComparer={() => {

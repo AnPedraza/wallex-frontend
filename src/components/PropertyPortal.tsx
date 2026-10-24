@@ -5,12 +5,16 @@ import { PropertyDetail } from './PropertyDetail';
 import { FolioSeal, type SealStatus } from './FolioSeal';
 import type { Property as DetailProperty } from '../data/properties';
 import { sampleFolio } from '../data/folio';
+import { TRANSPORT_LABELS } from '../data/transportLabels';
 
 interface PropertyPortalProps {
   comparisonIds?: string[];
   onToggleComparison?: (propertyId: string) => void;
   onOpenComparer?: () => void;
   onContactProperty?: (property: Property) => void;
+  // Perfil de transporte compartido con el comparador (si no llega, se maneja aquí)
+  transportProfileId?: string;
+  onTransportProfileChange?: (id: string) => void;
 }
 
 type SortKey = 'total-asc' | 'total-desc' | 'area-desc';
@@ -20,13 +24,6 @@ const RANGE_MAX = 3_500_000;
 const RANGE_STEP = 50_000;
 const DEFAULT_MAX = 3_000_000;
 const BIN_SIZE = 250_000;
-
-// Nombres cortos para los perfiles de transporte de los datos
-const TRANSPORT_LABELS: Record<string, string> = {
-  standard: 'TransMilenio o SITP a diario',
-  hybrid: 'Bici y transporte público',
-  intensive: 'Muchos trayectos y transbordos',
-};
 
 const num = (value: number) => value.toLocaleString('es-CO');
 
@@ -78,13 +75,17 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
   onToggleComparison,
   onOpenComparer,
   onContactProperty,
+  transportProfileId,
+  onTransportProfileChange,
 }) => {
   const [zone, setZone] = useState('Todas');
   const [maxTotal, setMaxTotal] = useState(DEFAULT_MAX);
   const [onlyVerified, setOnlyVerified] = useState(false);
   const [noGuarantor, setNoGuarantor] = useState(false);
   const [petsOk, setPetsOk] = useState(false);
-  const [transportId, setTransportId] = useState('standard');
+  const [localTransportId, setLocalTransportId] = useState('standard');
+  const transportId = transportProfileId ?? localTransportId;
+  const setTransportId = onTransportProfileChange ?? setLocalTransportId;
   const [sort, setSort] = useState<SortKey>('total-asc');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [showKycModal, setShowKycModal] = useState(false);

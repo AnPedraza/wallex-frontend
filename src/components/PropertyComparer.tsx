@@ -1,10 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import type { Property, TransportProfile } from '../types/property';
-import {
-  TRANSPORT_PROFILES,
-  calculatePricePerM2,
-  formatCOP,
-} from '../data/mockProperties';
+import { TRANSPORT_PROFILES, calculatePricePerM2, formatCOP } from '../data/mockProperties';
+import { FolioSeal, type SealStatus } from './FolioSeal';
+import { TRANSPORT_LABELS } from '../data/transportLabels';
 
 interface PropertyComparerProps {
   properties: Property[];
@@ -14,7 +12,19 @@ interface PropertyComparerProps {
   onReplaceProperty: (oldId: string, newProperty: Property) => void;
   onContactProperty: (property: Property) => void;
   onClose?: () => void;
+  // Perfil de transporte compartido con el catálogo, para que los totales coincidan
+  transportProfileId?: string;
+  onTransportProfileChange?: (id: string) => void;
 }
+
+const sealStatus = (p: Property): SealStatus => (!p.verified ? 'unverified' : p.certified ? 'verified' : 'pending');
+
+// Colores del desglose: tres tonos de la misma tinta, nunca colores de estado
+const SEGMENTS = [
+  { key: 'price', label: 'Canon', className: 'bg-ink' },
+  { key: 'adminFee', label: 'Administración', className: 'bg-ink-soft' },
+  { key: 'transport', label: 'Transporte', className: 'bg-control' },
+] as const;
 
 export const PropertyComparer: React.FC<PropertyComparerProps> = ({
   properties,
@@ -24,875 +34,494 @@ export const PropertyComparer: React.FC<PropertyComparerProps> = ({
   onReplaceProperty,
   onContactProperty,
   onClose,
+  transportProfileId,
+  onTransportProfileChange,
 }) => {
-  // Perfil de transporte seleccionado
-  const [selectedProfileId, setSelectedProfileId] = useState<string>('standard');
+  const [localProfileId, setLocalProfileId] = useState('standard');
+  const selectedProfileId = transportProfileId ?? localProfileId;
+  const setSelectedProfileId = onTransportProfileChange ?? setLocalProfileId;
+
   const [customTransportDayRate, setCustomTransportDayRate] = useState<number>(7100); // 2 pasajes TransMilenio ($3.550 c/u)
   const [commuteDaysPerMonth, setCommuteDaysPerMonth] = useState<number>(22);
   const [isCustomTransport, setIsCustomTransport] = useState<boolean>(false);
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
   const [replacingId, setReplacingId] = useState<string | null>(null);
 
-  // Perfil activo
-  const activeProfile = useMemo<TransportProfile>(() => {
-    return (
-      TRANSPORT_PROFILES.find((p) => p.id === selectedProfileId) ||
-      TRANSPORT_PROFILES[0]
-    );
-  }, [selectedProfileId]);
+  const activeProfile = useMemo<TransportProfile>(
+    () => TRANSPORT_PROFILES.find((p) => p.id === selectedProfileId) || TRANSPORT_PROFILES[0],
+    [selectedProfileId]
+  );
 
-  // Cálculo de transporte por propiedad
-  const getTransportForProperty = React.useCallback((prop: Property): number => {
-    if (isCustomTransport) {
-      // Ajuste proporcional según la zona y días personalizados
-      const zoneWeight = prop.zone === 'Chapinero' ? 0.75 : prop.zone === 'Teusaquillo' ? 0.9 : 1.3;
-      return Math.round(customTransportDayRate * commuteDaysPerMonth * zoneWeight);
-    }
-    return Math.round(prop.estimatedTransportMonthly * activeProfile.multiplier);
-  }, [isCustomTransport, customTransportDayRate, commuteDaysPerMonth, activeProfile]);
+  // Transporte por inmueble: perfil compartido o ajuste manual de esta vista
+  const getTransportForProperty = React.useCallback(
+    (prop: Property): number => {
+      if (isCustomTransport) {
+        // Ajuste proporcional según la zona y los días elegidos
+        const zoneWeight = prop.zone === 'Chapinero' ? 0.75 : prop.zone === 'Teusaquillo' ? 0.9 : 1.3;
+        return Math.round(customTransportDayRate * commuteDaysPerMonth * zoneWeight);
+      }
+      return Math.round(prop.estimatedTransportMonthly * activeProfile.multiplier);
+    },
+    [isCustomTransport, customTransportDayRate, commuteDaysPerMonth, activeProfile]
+  );
 
-  // Métricas calculadas para cada propiedad
-  const calculatedMetrics = useMemo(() => {
-    return properties.map((p) => {
-      const transport = getTransportForProperty(p);
-      const totalMonthly = p.price + p.adminFee + transport;
-      const pricePerM2 = calculatePricePerM2(p);
-      const firstMonthUpfront = totalMonthly + p.deposit;
-      return {
-        property: p,
-        transport,
-        totalMonthly,
-        pricePerM2,
-        firstMonthUpfront,
-      };
-    });
-  }, [properties, getTransportForProperty]);
+  const calculatedMetrics = useMemo(
+    () =>
+      properties.map((p) => {
+        const transport = getTransportForProperty(p);
+        const totalMonthly = p.price + p.adminFee + transport;
+        return {
+          property: p,
+          transport,
+          totalMonthly,
+          pricePerM2: calculatePricePerM2(p),
+          firstMonthUpfront: totalMonthly + p.deposit,
+        };
+      }),
+    [properties, getTransportForProperty]
+  );
 
-  // Identificar ganadores relativos (mínimo costo total, mejor $/m², etc.)
-  const lowestTotalMonthly = useMemo(() => {
-    if (calculatedMetrics.length === 0) return 0;
-    return Math.min(...calculatedMetrics.map((m) => m.totalMonthly));
-  }, [calculatedMetrics]);
+  const totals = calculatedMetrics.map((m) => m.totalMonthly);
+  const lowestTotalMonthly = totals.length ? Math.min(...totals) : 0;
+  const highestTotalMonthly = totals.length ? Math.max(...totals) : 0;
+  const lowestPricePerM2 = calculatedMetrics.length ? Math.min(...calculatedMetrics.map((m) => m.pricePerM2)) : 0;
+  const comparing = calculatedMetrics.length > 1;
 
-  const lowestPricePerM2 = useMemo(() => {
-    if (calculatedMetrics.length === 0) return 0;
-    return Math.min(...calculatedMetrics.map((m) => m.pricePerM2));
-  }, [calculatedMetrics]);
-
-  // Propiedades disponibles que no están en la lista actual
   const unselectedProperties = useMemo(() => {
     const currentIds = new Set(properties.map((p) => p.id));
     return availableProperties.filter((p) => !currentIds.has(p.id));
   }, [properties, availableProperties]);
 
-  const handlePrint = () => {
-    window.print();
+  const openAdd = (replace: string | null) => {
+    setReplacingId(replace);
+    setShowAddModal(true);
   };
 
+  const transportLabel = isCustomTransport
+    ? `Ajuste manual: ${commuteDaysPerMonth} días, ${formatCOP(customTransportDayRate)} al día`
+    : TRANSPORT_LABELS[activeProfile.id] ?? activeProfile.name;
+
+  const fill = (value: number, min: number, max: number) =>
+    ({ ['--fill' as string]: `${((value - min) / (max - min)) * 100}%` }) as React.CSSProperties;
+
+  const tabClass = (on: boolean) =>
+    `px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors ${on ? 'bg-ink text-white' : 'text-ink-soft hover:bg-paper'}`;
+
+  type Metric = (typeof calculatedMetrics)[number];
+
+  // Filas de la tabla: etiqueta en la primera columna fija y un valor por inmueble
+  const row = (label: React.ReactNode, render: (m: Metric) => React.ReactNode, strong = false) => (
+    <tr className="border-t border-rule">
+      <th scope="row" className={`text-left align-top p-4 sticky left-0 bg-surface text-sm ${strong ? 'font-bold' : 'font-medium text-ink-soft'}`}>
+        {label}
+      </th>
+      {calculatedMetrics.map((m) => (
+        <td key={m.property.id} className="align-top p-4 text-sm">
+          {render(m)}
+        </td>
+      ))}
+    </tr>
+  );
+
+  const section = (title: string) => (
+    <tr className="border-t border-ink">
+      <th colSpan={calculatedMetrics.length + 1} scope="colgroup" className="text-left px-4 pt-6 pb-2 text-base font-bold sticky left-0 bg-surface">
+        {title}
+      </th>
+    </tr>
+  );
+
+  const lowestMark = <span className="ml-2 text-[12.5px] font-semibold underline decoration-2 underline-offset-4">Menor</span>;
+
   return (
-    <div className="min-h-screen bg-[#F8F5F0] text-[#2B1B17] font-sans pb-20">
-      {/* Barra Superior de Navegación / Contexto */}
-      <div className="bg-white border-b border-[#EAE4DC] sticky top-16 z-30 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+    <div className="min-h-screen bg-paper pb-20">
+      {/* Encabezado fijo bajo la barra de navegación */}
+      <div className="bg-surface border-b border-rule lg:sticky lg:top-[68px] z-30">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-4 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-col items-start sm:flex-row sm:items-center gap-3 sm:gap-4 min-w-0">
             {onClose && (
               <button
                 type="button"
                 onClick={onClose}
-                className="flex items-center gap-1.5 text-xs font-bold text-[#8C5E3C] hover:text-[#2B1B17] bg-[#F8F5F0] hover:bg-[#EAE4DC] px-3 py-2 rounded-xl transition-colors"
-                title="Volver al catálogo"
+                className="flex items-center gap-1.5 text-sm font-semibold border border-control rounded-lg px-3 py-2 hover:bg-paper shrink-0"
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <path d="M15 5l-7 7 7 7" />
                 </svg>
-                <span>Volver al Catálogo</span>
+                Volver al catálogo
               </button>
             )}
-            <div>
-              <h1 className="text-xl sm:text-2xl font-extrabold text-[#2B1B17] tracking-tight">
-                Comparador Lado a Lado de Costo Total
-              </h1>
-              <p className="text-xs text-[#6E615A] mt-0.5 hidden sm:block">
-                Cálculo transparente de <strong>Valor de arriendo + Cuota de administración + Transporte estimado en Bogotá</strong>
-              </p>
+            <div className="min-w-0">
+              <h1 className="text-[2rem] lg:text-[2.375rem] font-extrabold tracking-[-0.03em] leading-none">Comparador lado a lado</h1>
+              <p className="text-sm text-ink-soft mt-2 hidden sm:block">Lo que pagarías cada mes: canon, administración y transporte estimado en Bogotá.</p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold px-3 py-1.5 bg-[#F8F5F0] text-[#6E615A] rounded-xl border border-[#EAE4DC]">
-              {properties.length} de 3 propiedades
-            </span>
+            <span className="text-sm text-ink-soft px-1">{properties.length} de 3 inmuebles</span>
             {properties.length < 3 && unselectedProperties.length > 0 && (
               <button
                 type="button"
-                onClick={() => {
-                  setReplacingId(null);
-                  setShowAddModal(true);
-                }}
-                className="flex items-center gap-1.5 bg-[#2B1B17] text-white text-xs font-semibold px-3.5 py-2 rounded-xl hover:bg-[#4A3E39] transition-all shadow-xs"
+                onClick={() => openAdd(null)}
+                className="bg-ink text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-ink-hover"
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-                </svg>
-                <span>Agregar Propiedad</span>
+                Agregar inmueble
               </button>
             )}
             <button
               type="button"
-              onClick={handlePrint}
-              className="p-2 text-[#6E615A] hover:text-[#2B1B17] hover:bg-[#EAE4DC] rounded-xl transition-colors"
-              title="Imprimir o guardar PDF"
+              onClick={() => window.print()}
+              className="flex items-center gap-1.5 text-sm font-semibold border border-control rounded-lg px-3 py-2 hover:bg-paper"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                <path d="M7 9V3h10v6M7 17H5a2 2 0 01-2-2v-4a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2h-2M7 14h10v7H7z" />
               </svg>
+              <span className="hidden sm:inline">Imprimir o guardar PDF</span>
+              <span className="sm:hidden">PDF</span>
             </button>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
-        {/* Caso especial: Menos de 2 propiedades seleccionadas */}
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 pt-6 space-y-6">
         {properties.length < 2 && (
-          <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-6 text-amber-900 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-200/80 flex items-center justify-center text-amber-900 shrink-0">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-              </div>
-              <div>
-                <h2 className="font-bold text-base text-amber-950">
-                  Selecciona al menos 2 propiedades para comparar
-                </h2>
-                <p className="text-xs text-amber-800 mt-0.5">
-                  Wallex requiere comparar lado a lado mínimo 2 alternativas para analizar el desglose financiero y requisitos.
-                </p>
-              </div>
+          <div className="bg-surface border border-rule rounded-[10px] p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-bold">Elige al menos 2 inmuebles para comparar</h2>
+              <p className="text-sm text-ink-soft mt-1">Con dos o tres opciones lado a lado ves cuál te sale más barata al mes y qué te piden en cada una.</p>
             </div>
             {unselectedProperties.length > 0 && (
-              <button
-                type="button"
-                onClick={() => {
-                  setReplacingId(null);
-                  setShowAddModal(true);
-                }}
-                className="shrink-0 bg-amber-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-amber-900 transition-colors"
-              >
-                + Elegir propiedad del catálogo
+              <button type="button" onClick={() => openAdd(null)} className="shrink-0 bg-ink text-white text-sm font-semibold px-4 py-2.5 rounded-lg hover:bg-ink-hover">
+                Elegir del catálogo
               </button>
             )}
           </div>
         )}
 
-        {/* Sección Interactiva: Simulador de Transporte en Bogotá */}
-        <section className="bg-white rounded-2xl p-5 border border-[#EAE4DC] shadow-xs space-y-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-[#F8F5F0] pb-3">
+        {/* Transporte: perfiles compartidos con el catálogo o ajuste manual */}
+        <section aria-labelledby="cmp-transporte" className="bg-surface border border-rule rounded-[10px] p-5">
+          <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-md bg-[#F8F5F0] flex items-center justify-center text-[#2B1B17]">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h8m-8 4h8m-4 8v-2m-6 2h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v11a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <h2 className="font-extrabold text-sm sm:text-base text-[#2B1B17]">
-                  Simulador de Movilidad y Transporte en Bogotá (Tarifa TransMilenio: $3.550)
-                </h2>
-              </div>
-              <p className="text-xs text-[#6E615A] mt-0.5">
-                En Bogotá, una vivienda con arriendo más bajo en periferia suele costar más al sumar el transporte y tiempo diario.
+              <h2 id="cmp-transporte" className="text-base font-bold">
+                Cómo te mueves
+              </h2>
+              <p className="text-sm text-ink-soft mt-1 max-w-[65ch]">
+                Un arriendo más barato lejos de tu universidad o trabajo puede salir más caro al sumar pasajes. Tarifa TransMilenio: $ 3.550.
               </p>
             </div>
-            <div className="flex items-center gap-2 text-xs">
-              <button
-                type="button"
-                onClick={() => setIsCustomTransport(false)}
-                className={`px-3 py-1.5 rounded-xl font-semibold transition-all ${
-                  !isCustomTransport
-                    ? 'bg-[#2B1B17] text-white shadow-xs'
-                    : 'bg-[#F8F5F0] text-[#6E615A] hover:bg-[#EAE4DC]'
-                }`}
-              >
-                Perfiles Predefinidos
+            <div className="flex gap-1 bg-paper rounded-lg p-1 self-start" role="group" aria-label="Forma de calcular el transporte">
+              <button type="button" aria-pressed={!isCustomTransport} onClick={() => setIsCustomTransport(false)} className={tabClass(!isCustomTransport)}>
+                Perfiles
               </button>
-              <button
-                type="button"
-                onClick={() => setIsCustomTransport(true)}
-                className={`px-3 py-1.5 rounded-xl font-semibold transition-all ${
-                  isCustomTransport
-                    ? 'bg-[#2B1B17] text-white shadow-xs'
-                    : 'bg-[#F8F5F0] text-[#6E615A] hover:bg-[#EAE4DC]'
-                }`}
-              >
-                Ajuste Manual
+              <button type="button" aria-pressed={isCustomTransport} onClick={() => setIsCustomTransport(true)} className={tabClass(isCustomTransport)}>
+                Ajuste manual
               </button>
             </div>
           </div>
 
           {!isCustomTransport ? (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4" role="radiogroup" aria-label="Perfil de transporte">
               {TRANSPORT_PROFILES.map((profile) => {
-                const isSelected = selectedProfileId === profile.id;
+                const on = selectedProfileId === profile.id;
                 return (
                   <button
                     key={profile.id}
                     type="button"
+                    role="radio"
+                    aria-checked={on}
                     onClick={() => setSelectedProfileId(profile.id)}
-                    className={`text-left p-3.5 rounded-xl border text-xs transition-all relative ${
-                      isSelected
-                        ? 'border-[#2B1B17] bg-[#F8F5F0] ring-1 ring-[#2B1B17]'
-                        : 'border-[#EAE4DC] hover:border-[#D9A76A] bg-white'
-                    }`}
+                    className={`text-left p-3.5 rounded-lg border transition-colors ${on ? 'border-ink ring-1 ring-ink' : 'border-rule hover:border-control'}`}
                   >
-                    <div className="flex items-center justify-between font-bold text-[#2B1B17]">
-                      <span>{profile.name}</span>
-                      {isSelected && (
-                        <span className="w-2 h-2 rounded-full bg-[#8C5E3C]" />
-                      )}
-                    </div>
-                    <p className="text-[#6E615A] text-[11px] mt-1 leading-snug">
-                      {profile.description}
-                    </p>
+                    <span className="flex items-center gap-2.5 text-sm font-semibold">
+                      <span aria-hidden="true" className={`size-4 rounded-full border-[1.5px] border-ink flex items-center justify-center shrink-0`}>
+                        {on && <span className="size-2 rounded-full bg-ink" />}
+                      </span>
+                      {TRANSPORT_LABELS[profile.id] ?? profile.name}
+                    </span>
+                    <span className="block text-[13px] text-ink-soft mt-1.5 leading-snug pl-[26px]">{profile.description}</span>
                   </button>
                 );
               })}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-[#F8F5F0] p-4 rounded-xl border border-[#EAE4DC] text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-4">
               <div>
-                <label className="block font-bold text-[#4A3E39] mb-1">
-                  Días de traslado mensual: <span className="text-[#8C5E3C]">{commuteDaysPerMonth} días</span>
+                <label htmlFor="cmp-dias" className="flex justify-between text-sm font-semibold">
+                  Días de traslado al mes <output htmlFor="cmp-dias">{commuteDaysPerMonth} días</output>
                 </label>
                 <input
+                  id="cmp-dias"
                   type="range"
                   min="5"
                   max="30"
                   step="1"
                   value={commuteDaysPerMonth}
                   onChange={(e) => setCommuteDaysPerMonth(Number(e.target.value))}
-                  className="w-full accent-[#2B1B17]"
+                  className="folio-range mt-2"
+                  style={fill(commuteDaysPerMonth, 5, 30)}
                 />
-                <div className="flex justify-between text-[10px] text-[#6E615A] mt-1">
-                  <span>5 días (Fines de semana)</span>
-                  <span>22 días (Laboral / Estudio)</span>
-                  <span>30 días (Diario)</span>
+                <div className="flex justify-between text-xs text-ink-faint">
+                  <span>5 días</span>
+                  <span>22 días hábiles</span>
+                  <span>30 días</span>
                 </div>
               </div>
               <div>
-                <label className="block font-bold text-[#4A3E39] mb-1">
-                  Gasto diario estimado en pasajes: <span className="text-[#8C5E3C]">{formatCOP(customTransportDayRate)}</span>
+                <label htmlFor="cmp-pasajes" className="flex justify-between text-sm font-semibold">
+                  Gasto diario en pasajes <output htmlFor="cmp-pasajes">{formatCOP(customTransportDayRate)}</output>
                 </label>
                 <input
+                  id="cmp-pasajes"
                   type="range"
                   min="3550"
                   max="21300"
                   step="3550"
                   value={customTransportDayRate}
                   onChange={(e) => setCustomTransportDayRate(Number(e.target.value))}
-                  className="w-full accent-[#2B1B17]"
+                  aria-valuetext={formatCOP(customTransportDayRate)}
+                  className="folio-range mt-2"
+                  style={fill(customTransportDayRate, 3550, 21300)}
                 />
-                <div className="flex justify-between text-[10px] text-[#6E615A] mt-1">
-                  <span>$3.550 (1 pasaje)</span>
-                  <span>$7.100 (Ida y vuelta)</span>
-                  <span>$14.200+ (Interzonal / Transbordos)</span>
+                <div className="flex justify-between text-xs text-ink-faint">
+                  <span>1 pasaje</span>
+                  <span>Ida y vuelta</span>
+                  <span>Con transbordos</span>
                 </div>
               </div>
             </div>
           )}
         </section>
 
-        {/* Tarjetas Superiores Comparativas (Overview Cards) */}
+        {/* Opciones: misma escala para el total, así la diferencia se ve sin calcular */}
         {properties.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {calculatedMetrics.map((item, index) => {
-              const { property, transport, totalMonthly, pricePerM2 } = item;
-              const isLowestCost = totalMonthly === lowestTotalMonthly && calculatedMetrics.length > 1;
-              const isLowestPriceM2 = pricePerM2 === lowestPricePerM2 && calculatedMetrics.length > 1;
-              const diffFromMin = totalMonthly - lowestTotalMonthly;
+          <section aria-label="Opciones en comparación">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-ink-soft mb-3" aria-hidden="true">
+              {SEGMENTS.map((s) => (
+                <span key={s.key} className="flex items-center gap-1.5">
+                  <span className={`size-2.5 rounded-[2px] ${s.className}`} />
+                  {s.label}
+                </span>
+              ))}
+              <span>· Barras a la misma escala</span>
+            </div>
 
-              // Proporciones para la barra de costos
-              const rentPct = Math.round((property.price / totalMonthly) * 100);
-              const adminPct = Math.round((property.adminFee / totalMonthly) * 100);
-              const transportPct = 100 - rentPct - adminPct;
+            <ul className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+              {calculatedMetrics.map(({ property, transport, totalMonthly }, index) => {
+                const isLowest = comparing && totalMonthly === lowestTotalMonthly;
+                const diff = totalMonthly - lowestTotalMonthly;
+                const parts = { price: property.price, adminFee: property.adminFee, transport };
+                const status = sealStatus(property);
 
-              return (
-                <div
-                  key={property.id}
-                  className={`bg-white rounded-2xl overflow-hidden border transition-all flex flex-col justify-between shadow-xs ${
-                    isLowestCost
-                      ? 'border-emerald-500 ring-2 ring-emerald-400/30'
-                      : 'border-[#EAE4DC]'
-                  }`}
-                >
-                  <div>
-                    {/* Header de la tarjeta con imagen y badges */}
-                    <div className="relative h-44 w-full bg-gray-100 overflow-hidden">
-                      <img
-                        src={property.image}
-                        alt={property.title}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-
-                      {/* Pill de posición */}
-                      <span className="absolute top-3 left-3 bg-[#2B1B17]/90 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg backdrop-blur-xs">
-                        Opción {index + 1}
-                      </span>
-
-                      {/* Botón para cambiar o quitar */}
-                      <div className="absolute top-3 right-3 flex items-center gap-1">
+                return (
+                  <li key={property.id} className={`bg-surface border rounded-[10px] overflow-hidden flex flex-col ${isLowest ? 'border-ink ring-1 ring-ink' : 'border-rule'}`}>
+                    <div className="relative aspect-[16/9] bg-rule">
+                      <img src={property.image} alt="" className="absolute inset-0 size-full object-cover" />
+                      <span className="absolute top-2.5 left-2.5 bg-ink text-white text-[13px] font-semibold px-2.5 py-1 rounded-md">Opción {index + 1}</span>
+                      <div className="absolute top-2.5 right-2.5 flex gap-1.5">
                         {unselectedProperties.length > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setReplacingId(property.id);
-                              setShowAddModal(true);
-                            }}
-                            className="bg-white/90 hover:bg-white text-[#2B1B17] text-[10px] font-bold px-2 py-1 rounded-lg backdrop-blur-xs transition-colors shadow-xs"
-                            title="Cambiar esta propiedad"
-                          >
+                          <button type="button" onClick={() => openAdd(property.id)} className="bg-surface text-[13px] font-semibold px-2.5 py-1 rounded-md hover:bg-paper">
                             Cambiar
                           </button>
                         )}
                         <button
                           type="button"
                           onClick={() => onRemoveProperty(property.id)}
-                          className="w-6 h-6 bg-black/60 hover:bg-red-600 text-white rounded-lg flex items-center justify-center text-xs transition-colors"
-                          title="Quitar de la comparativa"
-                          aria-label="Quitar de la comparativa"
+                          aria-label={`Quitar ${property.title} del comparador`}
+                          className="bg-surface size-7 rounded-md flex items-center justify-center hover:bg-paper"
                         >
-                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
+                            <path d="M6 6l12 12M18 6L6 18" />
                           </svg>
                         </button>
                       </div>
-
-                      {/* Título sobre imagen */}
-                      <div className="absolute bottom-3 left-3 right-3 text-white">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#D9A76A]">
-                          {property.location}
-                        </span>
-                        <h3 className="text-base font-bold leading-tight truncate">
-                          {property.title}
-                        </h3>
-                      </div>
                     </div>
 
-                    {/* Resumen del Costo Total */}
-                    <div className="p-5 space-y-4">
-                      {/* Badge de Ganador */}
-                      <div className="flex flex-wrap gap-1.5 min-h-[26px]">
-                        {isLowestCost && (
-                          <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-emerald-300">
-                            Menor Costo Total Mensual
-                          </span>
-                        )}
-                        {isLowestPriceM2 && (
-                          <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-full border border-blue-200">
-                            Mejor Precio / m² ({formatCOP(pricePerM2)}/m²)
-                          </span>
-                        )}
-                        {property.verified && property.certified && (
-                          <span className="inline-flex items-center gap-1 bg-[#F8F5F0] text-[#2B1B17] text-[10px] font-bold px-2 py-0.5 rounded-full border border-[#D9A76A]">
-                            100% Verificado
-                          </span>
-                        )}
-                      </div>
+                    <div className="px-4 pt-3.5 pb-4 flex-1 flex flex-col">
+                      <h3 className="text-[17px] font-bold tracking-[-0.01em] leading-snug">{property.title}</h3>
+                      <p className="text-[13px] text-ink-soft mt-1">{property.location}</p>
 
-                      {/* Cifra destacada de Costo Total */}
-                      <div className="bg-[#F8F5F0] p-4 rounded-xl border border-[#EAE4DC]">
-                        <span className="text-[11px] font-bold text-[#6E615A] uppercase tracking-wider block">
-                          Costo Total Real Estimado
-                        </span>
-                        <div className="flex items-baseline gap-1 mt-1">
-                          <span className="text-2xl font-black text-[#2B1B17]">
-                            {formatCOP(totalMonthly)}
-                          </span>
-                          <span className="text-xs font-semibold text-[#6E615A]">/ mes</span>
-                        </div>
+                      <p className="mt-3 flex items-baseline gap-1.5">
+                        <strong className="text-[28px] font-extrabold tracking-[-0.02em] leading-none">{formatCOP(totalMonthly)}</strong>
+                        <span className="text-[13px] text-ink-soft">al mes</span>
+                      </p>
+                      {comparing && (
+                        <p className="text-[13px] mt-1.5 font-semibold">
+                          {isLowest ? 'La opción más barata al mes' : <span className="text-ink-soft font-normal">{formatCOP(diff)} más al mes que la más barata</span>}
+                        </p>
+                      )}
 
-                        {/* Comparación relativa frente al mínimo */}
-                        {calculatedMetrics.length > 1 && (
-                          <div className="text-[11px] mt-1 font-semibold">
-                            {isLowestCost ? (
-                              <span className="text-emerald-700 font-bold">
-                                Alternativa más económica del comparador
-                              </span>
-                            ) : (
-                              <span className="text-amber-800">
-                                +{formatCOP(diffFromMin)} más al mes vs la más económica
-                              </span>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Barra Desglosada Proporcional */}
-                        <div className="mt-3 space-y-1.5">
-                          <div className="h-2.5 w-full bg-gray-200 rounded-full overflow-hidden flex">
-                            <div
-                              style={{ width: `${rentPct}%` }}
-                              className="bg-[#2B1B17] h-full"
-                              title={`Arriendo: ${rentPct}%`}
-                            />
-                            <div
-                              style={{ width: `${adminPct}%` }}
-                              className="bg-[#8C5E3C] h-full"
-                              title={`Admin: ${adminPct}%`}
-                            />
-                            <div
-                              style={{ width: `${transportPct}%` }}
-                              className="bg-[#D9A76A] h-full"
-                              title={`Transporte: ${transportPct}%`}
-                            />
-                          </div>
-                          <div className="flex justify-between text-[10px] text-[#6E615A] font-medium">
-                            <span className="flex items-center gap-1">
-                              <span className="w-2 h-2 rounded-full bg-[#2B1B17] inline-block" />
-                              Arriendo {rentPct}%
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <span className="w-2 h-2 rounded-full bg-[#8C5E3C] inline-block" />
-                              Admin {adminPct}%
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <span className="w-2 h-2 rounded-full bg-[#D9A76A] inline-block" />
-                              Transp. {transportPct}%
-                            </span>
-                          </div>
+                      {/* Barra a escala del total más alto */}
+                      <div className="mt-3 h-3 bg-paper rounded-[2px] overflow-hidden" aria-hidden="true">
+                        <div className="h-full flex gap-px" style={{ width: `${(totalMonthly / highestTotalMonthly) * 100}%` }}>
+                          {SEGMENTS.map((s) => (
+                            <span key={s.key} className={s.className} style={{ width: `${(parts[s.key] / totalMonthly) * 100}%` }} />
+                          ))}
                         </div>
                       </div>
 
-                      {/* Mini desglose numérico */}
-                      <div className="space-y-1.5 text-xs">
-                        <div className="flex justify-between text-[#4A3E39]">
-                          <span>Valor de arriendo:</span>
-                          <span className="font-bold">{formatCOP(property.price)}</span>
+                      <dl className="mt-3 text-[13px] space-y-1">
+                        <div className="flex justify-between gap-3">
+                          <dt className="text-ink-soft">Canon</dt>
+                          <dd className="font-semibold">{formatCOP(property.price)}</dd>
                         </div>
-                        <div className="flex justify-between text-[#4A3E39]">
-                          <span>Cuota de administración:</span>
-                          <span className="font-bold">{formatCOP(property.adminFee)}</span>
+                        <div className="flex justify-between gap-3">
+                          <dt className="text-ink-soft">Administración</dt>
+                          <dd className="font-semibold">{formatCOP(property.adminFee)}</dd>
                         </div>
-                        <div className="flex justify-between text-[#4A3E39]">
-                          <span>Transporte mensual estimado:</span>
-                          <span className="font-bold text-[#8C5E3C]">{formatCOP(transport)}</span>
+                        <div className="flex justify-between gap-3">
+                          <dt className="text-ink-soft">Transporte estimado</dt>
+                          <dd className="font-semibold">{formatCOP(transport)}</dd>
                         </div>
+                      </dl>
+
+                      <div className="flex items-center gap-3 mt-4 pt-3 border-t border-rule">
+                        <FolioSeal seed={property.id} status={status} size={40} />
+                        <p className="text-[12.5px] leading-snug">
+                          {status === 'verified' && <span className="font-bold text-verified">Identidad y tradición verificadas</span>}
+                          {status === 'pending' && <span className="font-bold text-pending">Identidad verificada, tradición pendiente</span>}
+                          {status === 'unverified' && <span className="font-bold text-unverified">Quien publica no está verificado</span>}
+                        </p>
                       </div>
+
+                      <button
+                        type="button"
+                        onClick={() => onContactProperty(property)}
+                        className="mt-4 w-full bg-ink text-white text-sm font-semibold py-2.5 rounded-lg hover:bg-ink-hover"
+                      >
+                        Contactar a quien publica
+                      </button>
                     </div>
-                  </div>
+                  </li>
+                );
+              })}
 
-                  {/* Botón de Contacto */}
-                  <div className="p-5 pt-0">
-                    <button
-                      type="button"
-                      onClick={() => onContactProperty(property)}
-                      className="w-full bg-[#2B1B17] hover:bg-[#4A3E39] text-white text-xs font-bold py-3 rounded-xl transition-all shadow-xs flex items-center justify-center gap-2"
-                    >
-                      <svg className="w-4 h-4 text-[#D9A76A]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                      </svg>
-                      <span>Contactar con KYC</span>
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-
-            {/* Espacio para agregar una 3ra propiedad si hay menos de 3 */}
-            {properties.length < 3 && unselectedProperties.length > 0 && (
-              <div
-                onClick={() => {
-                  setReplacingId(null);
-                  setShowAddModal(true);
-                }}
-                className="border-2 border-dashed border-[#EAE4DC] hover:border-[#2B1B17] bg-white/50 hover:bg-white rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all min-h-[360px] group"
-              >
-                <div className="w-12 h-12 rounded-full bg-[#F8F5F0] group-hover:bg-[#2B1B17] text-[#2B1B17] group-hover:text-white flex items-center justify-center text-xl transition-colors mb-3">
-                  +
-                </div>
-                <h4 className="font-bold text-sm text-[#2B1B17]">
-                  Agregar Propiedad #{properties.length + 1}
-                </h4>
-                <p className="text-xs text-[#6E615A] max-w-[200px] mt-1">
-                  Compara hasta 3 inmuebles simultáneamente para tomar la mejor decisión en Bogotá.
-                </p>
-                <span className="mt-4 text-xs font-bold text-[#8C5E3C] group-hover:underline">
-                  Explorar disponibles →
-                </span>
-              </div>
-            )}
-          </div>
+              {properties.length < 3 && unselectedProperties.length > 0 && (
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => openAdd(null)}
+                    className="w-full h-full min-h-[160px] md:min-h-[320px] border border-dashed border-control rounded-[10px] flex flex-col items-center justify-center text-center p-8 hover:bg-surface transition-colors"
+                  >
+                    <svg className="size-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+                      <path d="M12 5v14M5 12h14" />
+                    </svg>
+                    <span className="mt-3 text-base font-bold">Agregar un inmueble</span>
+                    <span className="mt-1 text-sm text-ink-soft max-w-[24ch]">Puedes comparar hasta 3 a la vez.</span>
+                  </button>
+                </li>
+              )}
+            </ul>
+          </section>
         )}
 
-        {/* TABLA COMPARATIVA DETALLADA LADO A LADO */}
+        {/* Tabla detallada: mismas filas y mismo orden para todos */}
         {properties.length >= 2 && (
-          <section className="bg-white rounded-2xl border border-[#EAE4DC] shadow-xs overflow-hidden">
-            <div className="p-5 border-b border-[#EAE4DC] bg-[#FAF8F5] flex items-center justify-between">
-              <div>
-                <h2 className="font-extrabold text-base text-[#2B1B17]">
-                  Matriz de Comparación Detallada Lado a Lado
-                </h2>
-                <p className="text-xs text-[#6E615A] mt-0.5">
-                  Análisis punto por punto de finanzas, seguridad y barreras de entrada.
-                </p>
-              </div>
-              <span className="text-xs text-[#6E615A] italic hidden sm:block">
-                Desplaza horizontalmente si es necesario →
-              </span>
+          <section aria-labelledby="cmp-tabla" className="bg-surface border border-rule rounded-[10px] overflow-hidden">
+            <div className="px-4 sm:px-5 py-4 flex flex-wrap items-baseline justify-between gap-2">
+              <h2 id="cmp-tabla" className="text-lg font-bold">
+                Comparación punto por punto
+              </h2>
+              <p className="text-[13px] text-ink-soft md:hidden">Desliza la tabla para ver todas las opciones.</p>
             </div>
-
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[650px]">
+              <table className="w-full border-collapse min-w-[600px] sm:min-w-[680px]">
+                <caption className="sr-only">Comparación detallada de los inmuebles elegidos</caption>
                 <thead>
-                  <tr className="border-b border-[#EAE4DC] bg-white">
-                    <th className="p-4 text-xs font-bold text-[#6E615A] uppercase tracking-wider w-1/4 min-w-[200px] sticky left-0 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                      Criterio de Evaluación
+                  <tr className="border-t border-rule">
+                    <th scope="col" className="text-left p-4 text-[13px] font-semibold text-ink-soft w-[24%] min-w-[130px] sm:min-w-[190px] sticky left-0 bg-surface">
+                      Dato
                     </th>
                     {calculatedMetrics.map(({ property }, idx) => (
-                      <th key={property.id} className="p-4 text-xs font-bold text-[#2B1B17] w-1/3 min-w-[220px]">
-                        <div className="flex items-center justify-between">
-                          <span className="font-extrabold truncate">Opción {idx + 1}: {property.title}</span>
-                        </div>
-                        <span className="text-[11px] text-[#8C5E3C] font-normal block truncate">
-                          {property.location}
-                        </span>
+                      <th key={property.id} scope="col" className="text-left p-4 align-bottom min-w-[210px]">
+                        <span className="block text-[12.5px] text-ink-faint font-medium">Opción {idx + 1}</span>
+                        <span className="block text-sm font-bold">{property.title}</span>
                       </th>
                     ))}
                   </tr>
                 </thead>
-
-                <tbody className="divide-y divide-[#EAE4DC] text-xs">
-                  {/* SECCIÓN 1: COSTO TOTAL Y DESGLOSE FINANCIERO */}
-                  <tr className="bg-[#F8F5F0]/70 font-extrabold text-[#2B1B17]">
-                    <td colSpan={calculatedMetrics.length + 1} className="py-2.5 px-4 text-[11px] uppercase tracking-wider">
-                      1. Desglose Financiero y Costo Total Mensual
-                    </td>
-                  </tr>
-
-                  {/* Costo Total Mensual */}
-                  <tr className="bg-amber-50/50 font-bold">
-                    <td className="p-4 text-[#2B1B17] sticky left-0 bg-amber-50/90 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                      <div>
-                        <span className="font-extrabold text-sm text-[#2B1B17] block">Costo Total Mensual</span>
-                        <span className="text-[10px] text-[#6E615A] font-normal">Arriendo + Administración + Transporte</span>
-                      </div>
-                    </td>
-                    {calculatedMetrics.map(({ property, totalMonthly }) => (
-                      <td key={property.id} className="p-4">
-                        <div className="text-base font-black text-[#2B1B17]">
-                          {formatCOP(totalMonthly)}
-                        </div>
-                        {totalMonthly === lowestTotalMonthly && (
-                          <span className="inline-block bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-md mt-1">
-                            Más económico
-                          </span>
-                        )}
-                      </td>
-                    ))}
-                  </tr>
-
-                  {/* Arriendo Mensual */}
-                  <tr>
-                    <td className="p-4 text-[#4A3E39] font-medium sticky left-0 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                      Valor de arriendo mensual
-                    </td>
-                    {calculatedMetrics.map(({ property }) => (
-                      <td key={property.id} className="p-4 font-semibold text-[#2B1B17]">
-                        {formatCOP(property.price)}
-                      </td>
-                    ))}
-                  </tr>
-
-                  {/* Cuota de Administración */}
-                  <tr>
-                    <td className="p-4 text-[#4A3E39] font-medium sticky left-0 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                      Cuota de administración
-                    </td>
-                    {calculatedMetrics.map(({ property }) => (
-                      <td key={property.id} className="p-4 font-semibold text-[#2B1B17]">
-                        {formatCOP(property.adminFee)}
-                      </td>
-                    ))}
-                  </tr>
-
-                  {/* Transporte Estimado */}
-                  <tr>
-                    <td className="p-4 text-[#4A3E39] font-medium sticky left-0 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                      <div>
-                        <span>Transporte estimado mensual</span>
-                        <span className="text-[10px] text-[#8C5E3C] block font-normal">
-                          {isCustomTransport ? 'Configuración personalizada' : activeProfile.name}
-                        </span>
-                      </div>
-                    </td>
-                    {calculatedMetrics.map(({ property, transport }) => (
-                      <td key={property.id} className="p-4 font-semibold text-[#8C5E3C]">
-                        <div>{formatCOP(transport)}</div>
-                        <span className="text-[10px] text-[#6E615A] block mt-0.5 font-normal">
-                          {property.transitAccess}
-                        </span>
-                      </td>
-                    ))}
-                  </tr>
-
-                  {/* Valor por m2 */}
-                  <tr>
-                    <td className="p-4 text-[#4A3E39] font-medium sticky left-0 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                      Precio por metro cuadrado ($/m²)
-                    </td>
-                    {calculatedMetrics.map(({ property, pricePerM2 }) => (
-                      <td key={property.id} className="p-4 text-[#2B1B17]">
-                        <span className="font-semibold">{formatCOP(pricePerM2)} / m²</span>
-                        {pricePerM2 === lowestPricePerM2 && (
-                          <span className="text-[10px] text-blue-700 block font-bold">
-                            Mejor rendimiento espacial
-                          </span>
-                        )}
-                      </td>
-                    ))}
-                  </tr>
-
-                  {/* Depósito requerido */}
-                  <tr>
-                    <td className="p-4 text-[#4A3E39] font-medium sticky left-0 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                      Depósito de garantía
-                    </td>
-                    {calculatedMetrics.map(({ property }) => (
-                      <td key={property.id} className="p-4 text-[#2B1B17]">
-                        <span className="font-semibold">{formatCOP(property.deposit)}</span>
-                        <span className="text-[10px] text-[#6E615A] block">
-                          ({property.requirements.depositMonths} mes{property.requirements.depositMonths === 1 ? '' : 'es'} de arriendo)
-                        </span>
-                      </td>
-                    ))}
-                  </tr>
-
-                  {/* Inversión Inicial Primer Mes */}
-                  <tr className="bg-[#F8F5F0]/40">
-                    <td className="p-4 text-[#4A3E39] font-bold sticky left-0 bg-[#F8F5F0] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                      Inversión inicial requerida (Mes 1)
-                      <span className="text-[10px] text-[#6E615A] block font-normal">
-                        Costo total + Depósito en garantía
+                <tbody>
+                  {section('Dinero')}
+                  {row("Total del mes", ({ totalMonthly }) => (
+                      <span className="text-lg font-extrabold tracking-[-0.01em]">
+                        {formatCOP(totalMonthly)}
+                        {totalMonthly === lowestTotalMonthly && lowestMark}
                       </span>
-                    </td>
-                    {calculatedMetrics.map(({ property, firstMonthUpfront }) => (
-                      <td key={property.id} className="p-4 font-extrabold text-[#2B1B17]">
-                        {formatCOP(firstMonthUpfront)}
-                      </td>
+                    ), true)}
+                  {row("Canon", ({ property }) => formatCOP(property.price))}
+                  {row("Administración", ({ property }) => formatCOP(property.adminFee))}
+                  {row(<>
+                        Transporte estimado
+                        <span className="block text-[12.5px] text-ink-faint font-normal mt-0.5">{transportLabel}</span>
+                      </>, ({ property, transport }) => (
+                      <>
+                        {formatCOP(transport)}
+                        <span className="block text-[12.5px] text-ink-soft mt-0.5">{property.transitAccess}</span>
+                      </>
                     ))}
-                  </tr>
-
-                  {/* SECCIÓN 2: SEGURIDAD Y VERIFICACIÓN WALLEX */}
-                  <tr className="bg-[#F8F5F0]/70 font-extrabold text-[#2B1B17]">
-                    <td colSpan={calculatedMetrics.length + 1} className="py-2.5 px-4 text-[11px] uppercase tracking-wider">
-                      2. Confianza y Verificación Wallex
-                    </td>
-                  </tr>
-
-                  {/* Verificación KYC Propietario */}
-                  <tr>
-                    <td className="p-4 text-[#4A3E39] font-medium sticky left-0 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                      Identidad del propietario (KYC)
-                    </td>
-                    {calculatedMetrics.map(({ property }) => (
-                      <td key={property.id} className="p-4">
-                        {property.verified ? (
-                          <div className="flex items-center gap-1.5 text-emerald-700 font-bold">
-                            <svg className="w-3.5 h-3.5 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span>Verificada con Cédula y Biometría</span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1.5 text-amber-700 font-bold">
-                            <span className="w-3.5 h-3.5 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center text-[10px]">
-                              !
-                            </span>
-                            <span>Sin verificar (Canal informal)</span>
-                          </div>
-                        )}
-                        <span className="text-[10px] text-[#6E615A] block mt-0.5">
-                          {property.ownerName}
+                  {row("Precio por m²", ({ pricePerM2 }) => (
+                      <>
+                        {formatCOP(pricePerM2)} / m²
+                        {pricePerM2 === lowestPricePerM2 && lowestMark}
+                      </>
+                    ))}
+                  {row("Depósito", ({ property }) => (
+                      <>
+                        {formatCOP(property.deposit)}
+                        <span className="block text-[12.5px] text-ink-soft mt-0.5">
+                          {property.requirements.depositMonths} {property.requirements.depositMonths === 1 ? 'mes' : 'meses'} de canon
                         </span>
-                      </td>
+                      </>
                     ))}
-                  </tr>
+                  {row(<>
+                        Primer pago
+                        <span className="block text-[12.5px] text-ink-faint font-normal mt-0.5">Total del mes + depósito</span>
+                      </>, ({ firstMonthUpfront }) => <span className="font-bold">{formatCOP(firstMonthUpfront)}</span>, true)}
 
-                  {/* Certificado de Tradición y Libertad */}
-                  <tr>
-                    <td className="p-4 text-[#4A3E39] font-medium sticky left-0 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                      Certificado de Tradición (VUR / SNR)
-                    </td>
-                    {calculatedMetrics.map(({ property }) => (
-                      <td key={property.id} className="p-4">
-                        {property.certified ? (
-                          <span className="inline-flex items-center gap-1 bg-[#D9A76A]/20 text-[#2B1B17] font-bold px-2.5 py-1 rounded-md border border-[#D9A76A]">
-                            Cotejado y Válido
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 bg-gray-100 text-[#6E615A] font-semibold px-2 py-0.5 rounded-md">
-                            Pendiente de Cotejo
-                          </span>
-                        )}
-                      </td>
+                  {section('Confianza')}
+                  {row("Identidad de quien publica", ({ property }) => (
+                      <>
+                        <span className={`font-semibold ${property.verified ? 'text-verified' : 'text-unverified'}`}>
+                          {property.verified ? 'Verificada' : 'Sin verificar'}
+                        </span>
+                        <span className="block text-[12.5px] text-ink-soft mt-0.5">{property.ownerName}</span>
+                      </>
                     ))}
-                  </tr>
-
-                  {/* SECCIÓN 3: REQUISITOS DE ENTRADA */}
-                  <tr className="bg-[#F8F5F0]/70 font-extrabold text-[#2B1B17]">
-                    <td colSpan={calculatedMetrics.length + 1} className="py-2.5 px-4 text-[11px] uppercase tracking-wider">
-                      3. Requisitos de Acceso
-                    </td>
-                  </tr>
-
-                  {/* Codeudor con finca raíz */}
-                  <tr>
-                    <td className="p-4 text-[#4A3E39] font-medium sticky left-0 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                      ¿Exige Codeudor con Finca Raíz?
-                    </td>
-                    {calculatedMetrics.map(({ property }) => (
-                      <td key={property.id} className="p-4">
-                        {!property.requirements.guarantorRequired ? (
-                          <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-800 font-bold px-2 py-0.5 rounded-md border border-emerald-200">
-                            No exige codeudor de finca raíz
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-900 font-semibold px-2 py-0.5 rounded-md border border-amber-200">
-                            Exige codeudor tradicional
-                          </span>
-                        )}
-                      </td>
+                  {row("Certificado de tradición y libertad", ({ property }) => (
+                      <span className={`font-semibold ${property.certified ? 'text-verified' : 'text-pending'}`}>
+                        {property.certified ? 'Cotejado' : 'Pendiente de cotejo'}
+                      </span>
                     ))}
-                  </tr>
 
-                  {/* Ingresos requeridos */}
-                  <tr>
-                    <td className="p-4 text-[#4A3E39] font-medium sticky left-0 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                      Demostración de Ingresos
-                    </td>
-                    {calculatedMetrics.map(({ property }) => {
-                      const requiredIncome = property.price * property.requirements.minIncomeMultiplier;
-                      return (
-                        <td key={property.id} className="p-4">
-                          <span className="font-semibold text-[#2B1B17]">
-                            {property.requirements.minIncomeMultiplier}x el arriendo ({formatCOP(requiredIncome)})
-                          </span>
-                        </td>
-                      );
-                    })}
-                  </tr>
+                  {section('Requisitos')}
+                  {row("Codeudor con finca raíz", ({ property }) => (property.requirements.guarantorRequired ? <span className="font-semibold">Te lo piden</span> : 'No te lo piden'))}
+                  {row("Ingresos que debes demostrar", ({ property }) =>
+                      `${property.requirements.minIncomeMultiplier} veces el canon (${formatCOP(property.price * property.requirements.minIncomeMultiplier)})`)}
+                  {row("Mascotas", ({ property }) => (property.requirements.petsAllowed ? 'Sí' : 'No'))}
+                  {row("Contrato mínimo", ({ property }) => `${property.requirements.leaseTermMonths} meses`)}
 
-                  {/* Mascotas */}
-                  <tr>
-                    <td className="p-4 text-[#4A3E39] font-medium sticky left-0 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                      Mascotas Permitidas
-                    </td>
-                    {calculatedMetrics.map(({ property }) => (
-                      <td key={property.id} className="p-4">
-                        {property.requirements.petsAllowed ? (
-                          <span className="text-emerald-700 font-bold">Sí se admiten</span>
-                        ) : (
-                          <span className="text-red-700 font-semibold">No permitidas</span>
-                        )}
-                      </td>
+                  {section('El inmueble')}
+                  {row("Área", ({ property }) => `${property.area} m²`)}
+                  {row("Distribución", ({ property }) =>
+                      `${property.bedrooms} ${property.bedrooms === 1 ? 'habitación' : 'habitaciones'} · ${property.bathrooms} ${property.bathrooms === 1 ? 'baño' : 'baños'}`)}
+                  {row("Estrato", ({ property }) => property.stratum)}
+                  {row("Transporte cercano", ({ property }) => <span className="text-ink-soft">{property.transitAccess}</span>)}
+                  {row("Lo que tiene", ({ property }) => (
+                      <ul className="space-y-0.5 text-ink-soft">
+                        {property.features?.map((f) => (
+                          <li key={f}>{f}</li>
+                        ))}
+                      </ul>
                     ))}
-                  </tr>
-
-                  {/* Plazo del contrato */}
-                  <tr>
-                    <td className="p-4 text-[#4A3E39] font-medium sticky left-0 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                      Plazo Mínimo de Contrato
-                    </td>
-                    {calculatedMetrics.map(({ property }) => (
-                      <td key={property.id} className="p-4 text-[#2B1B17]">
-                        {property.requirements.leaseTermMonths} meses
-                      </td>
-                    ))}
-                  </tr>
-
-                  {/* SECCIÓN 4: ESPACIO Y AMENIDADES */}
-                  <tr className="bg-[#F8F5F0]/70 font-extrabold text-[#2B1B17]">
-                    <td colSpan={calculatedMetrics.length + 1} className="py-2.5 px-4 text-[11px] uppercase tracking-wider">
-                      4. Características Físicas y del Inmueble
-                    </td>
-                  </tr>
-
-                  {/* Área */}
-                  <tr>
-                    <td className="p-4 text-[#4A3E39] font-medium sticky left-0 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                      Área Total Construida
-                    </td>
-                    {calculatedMetrics.map(({ property }) => (
-                      <td key={property.id} className="p-4 font-bold text-[#2B1B17]">
-                        {property.area} m²
-                      </td>
-                    ))}
-                  </tr>
-
-                  {/* Habitaciones y Baños */}
-                  <tr>
-                    <td className="p-4 text-[#4A3E39] font-medium sticky left-0 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                      Distribución
-                    </td>
-                    {calculatedMetrics.map(({ property }) => (
-                      <td key={property.id} className="p-4 text-[#2B1B17]">
-                        {property.bedrooms} Habitación{property.bedrooms === 1 ? '' : 'es'} • {property.bathrooms} Baño{property.bathrooms === 1 ? '' : 's'}
-                      </td>
-                    ))}
-                  </tr>
-
-                  {/* Estrato */}
-                  <tr>
-                    <td className="p-4 text-[#4A3E39] font-medium sticky left-0 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                      Estrato Socioeconómico
-                    </td>
-                    {calculatedMetrics.map(({ property }) => (
-                      <td key={property.id} className="p-4 text-[#2B1B17]">
-                        Estrato {property.stratum}
-                      </td>
-                    ))}
-                  </tr>
-
-                  {/* Conectividad */}
-                  <tr>
-                    <td className="p-4 text-[#4A3E39] font-medium sticky left-0 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                      Conectividad y Estaciones
-                    </td>
-                    {calculatedMetrics.map(({ property }) => (
-                      <td key={property.id} className="p-4 text-[#6E615A]">
-                        {property.transitAccess}
-                      </td>
-                    ))}
-                  </tr>
-
-                  {/* Características adicionales */}
-                  <tr>
-                    <td className="p-4 text-[#4A3E39] font-medium sticky left-0 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                      Destacados del Inmueble
-                    </td>
-                    {calculatedMetrics.map(({ property }) => (
-                      <td key={property.id} className="p-4">
-                        <ul className="list-disc list-inside space-y-0.5 text-[#6E615A] text-[11px]">
-                          {property.features?.map((f, i) => (
-                            <li key={i}>{f}</li>
-                          ))}
-                        </ul>
-                      </td>
-                    ))}
-                  </tr>
-
-                  {/* Fila de Acciones Finales */}
-                  <tr className="bg-[#FAF8F5]">
-                    <td className="p-4 font-bold text-[#2B1B17] sticky left-0 bg-[#FAF8F5] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                      Siguiente Paso
-                    </td>
+                  <tr className="border-t border-ink">
+                    <th scope="row" className="p-4 sticky left-0 bg-surface" />
                     {calculatedMetrics.map(({ property }) => (
                       <td key={property.id} className="p-4">
                         <button
                           type="button"
                           onClick={() => onContactProperty(property)}
-                          className="w-full bg-[#2B1B17] hover:bg-[#4A3E39] text-white font-bold py-2.5 px-3 rounded-xl text-xs transition-colors shadow-xs"
+                          className="w-full bg-ink text-white text-sm font-semibold py-2.5 px-3 rounded-lg hover:bg-ink-hover"
                         >
-                          Contactar ({property.zone})
+                          Contactar
                         </button>
                       </td>
                     ))}
@@ -904,88 +533,61 @@ export const PropertyComparer: React.FC<PropertyComparerProps> = ({
         )}
       </div>
 
-      {/* Modal para Agregar o Reemplazar Propiedad */}
+      {/* Agregar o reemplazar un inmueble */}
       {showAddModal && (
         <div
           onClick={(e) => e.target === e.currentTarget && setShowAddModal(false)}
-          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+          className="fixed inset-0 z-50 bg-ink/55 flex items-center justify-center p-4 overflow-y-auto"
         >
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-[#EAE4DC] space-y-5">
-            <div className="flex items-center justify-between border-b border-[#EAE4DC] pb-4">
+          <div role="dialog" aria-modal="true" aria-labelledby="cmp-agregar" className="bg-surface rounded-[10px] max-w-2xl w-full border border-rule">
+            <div className="flex items-start justify-between gap-4 px-5 pt-5 pb-4 border-b border-rule">
               <div>
-                <h3 className="text-lg font-extrabold text-[#2B1B17]">
-                  {replacingId ? 'Reemplazar Propiedad' : 'Agregar Propiedad al Comparador'}
+                <h3 id="cmp-agregar" className="text-lg font-bold">
+                  {replacingId ? 'Cambiar este inmueble' : 'Agregar un inmueble'}
                 </h3>
-                <p className="text-xs text-[#6E615A] mt-0.5">
-                  Elige un inmueble disponible de Bogotá para incluirlo en la matriz comparativa.
-                </p>
+                <p className="text-sm text-ink-soft mt-1">El total incluye el transporte con {isCustomTransport ? 'tu ajuste manual' : 'el perfil que elegiste'}.</p>
               </div>
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                className="w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:bg-[#F8F5F0]"
+                className="size-9 rounded-full border border-rule flex items-center justify-center hover:bg-paper shrink-0"
                 aria-label="Cerrar"
               >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <path d="M6 6l12 12M18 6L6 18" />
                 </svg>
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto p-1">
+            <ul className="max-h-[60vh] overflow-y-auto divide-y divide-rule">
               {unselectedProperties.map((prop) => {
-                const totalCost = prop.price + prop.adminFee + prop.estimatedTransportMonthly;
+                const totalCost = prop.price + prop.adminFee + getTransportForProperty(prop);
                 return (
-                  <div
-                    key={prop.id}
-                    className="border border-[#EAE4DC] hover:border-[#2B1B17] rounded-2xl p-3 flex flex-col justify-between hover:shadow-md transition-all group bg-white"
-                  >
-                    <div>
-                      <div className="relative h-28 w-full rounded-xl overflow-hidden mb-2 bg-gray-100">
-                        <img
-                          src={prop.image}
-                          alt={prop.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                        />
-                        {prop.verified && (
-                          <span className="absolute top-2 left-2 bg-[#2B1B17] text-white text-[9px] font-bold px-2 py-0.5 rounded-md">
-                            Verificado
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-[10px] font-bold text-[#8C5E3C] uppercase">
-                        {prop.location}
-                      </span>
-                      <h4 className="text-sm font-bold text-[#2B1B17] truncate">
-                        {prop.title}
-                      </h4>
-                      <div className="text-xs font-extrabold text-[#2B1B17] mt-1">
-                        {formatCOP(prop.price)}{' '}
-                        <span className="text-[10px] font-normal text-[#6E615A]">/ mes</span>
-                      </div>
-                      <div className="text-[11px] text-[#6E615A] mt-0.5">
-                        Costo total estimado: <strong className="text-[#2B1B17]">{formatCOP(totalCost)}</strong>
-                      </div>
+                  <li key={prop.id} className="flex items-center gap-4 px-5 py-3">
+                    <img src={prop.image} alt="" className="w-24 h-16 rounded-md object-cover shrink-0 bg-rule" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold truncate">{prop.title}</p>
+                      <p className="text-[13px] text-ink-soft truncate">{prop.location}</p>
+                      <p className="text-sm mt-0.5">
+                        <strong className="font-extrabold">{formatCOP(totalCost)}</strong> <span className="text-ink-soft">al mes</span>
+                        {!prop.verified && <span className="text-unverified font-semibold"> · sin verificar</span>}
+                      </p>
                     </div>
-
                     <button
                       type="button"
                       onClick={() => {
-                        if (replacingId) {
-                          onReplaceProperty(replacingId, prop);
-                        } else {
-                          onAddProperty(prop);
-                        }
+                        if (replacingId) onReplaceProperty(replacingId, prop);
+                        else onAddProperty(prop);
                         setShowAddModal(false);
                       }}
-                      className="mt-3 w-full bg-[#2B1B17] group-hover:bg-[#4A3E39] text-white text-xs font-bold py-2 rounded-xl transition-colors"
+                      className="shrink-0 bg-ink text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-ink-hover"
                     >
-                      {replacingId ? 'Seleccionar y Reemplazar' : 'Agregar a Comparativa'}
+                      {replacingId ? 'Usar este' : 'Agregar'}
                     </button>
-                  </div>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
           </div>
         </div>
       )}

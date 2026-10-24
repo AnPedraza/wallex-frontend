@@ -255,6 +255,12 @@ El orden de la columna del folio es fijo: lugar, título (28 px, 800), metadatos
 - **Requisitos:** dicen "Te lo piden" en tinta o "No te lo piden" en verde, sin píldoras.
 - **Contacto:** el pie con el total y "Contactar a quien publica" siempre queda a la vista, con una línea que avisa que antes se verifica la identidad.
 
+### Comparador lado a lado
+- **Encabezado:** "Volver al catálogo", título, conteo "n de 3 inmuebles", "Agregar inmueble" e "Imprimir o guardar PDF". En escritorio queda fijo bajo la barra; en celular se apila y no es fijo.
+- **Cómo te mueves:** panel con dos pestañas ("Perfiles" y "Ajuste manual"). Los perfiles son botones de radio y el ajuste manual usa el mismo control deslizante del catálogo. El perfil es el mismo que en el catálogo y la ficha (estado compartido en `App.tsx`), así que los totales coinciden en todas partes.
+- **Opciones:** una tarjeta por inmueble con su total del mes (28 px) y la diferencia frente a la más barata. Debajo va la **barra de desglose a la misma escala** que el total más alto: canon en tinta, administración en tinta suave y transporte en borde de control, y una sola leyenda arriba. Después vienen el sello, el estado de verificación y "Contactar a quien publica". La más barata se marca con borde en tinta, no en verde.
+- **Tabla punto por punto:** primera columna fija, filas en orden fijo y secciones (Dinero, Confianza, Requisitos, El inmueble) separadas por un filete en tinta. El menor valor se marca con la palabra "Menor" subrayada en tinta. Solo el estado de verificación usa verde, ámbar o rojo.
+
 ### Comparar (toggle)
 Botón sobre la foto, arriba a la derecha. Lleva una casilla dibujada y el texto "Comparar". Activo, pasa a fondo tinta con "En comparador" y usa `aria-pressed`.
 
