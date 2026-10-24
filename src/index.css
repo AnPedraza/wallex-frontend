@@ -1,1 +1,150 @@
 @import "tailwindcss";
+
+/* Schibsted Grotesk (OFL, ver assets/fonts/OFL.txt), servida desde el proyecto */
+@font-face {
+  font-family: "Schibsted Grotesk";
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url("./assets/fonts/schibsted-grotesk-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Schibsted Grotesk";
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url("./assets/fonts/schibsted-grotesk-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Tokens del mundo "folio de matrícula": usar estos nombres, no hex sueltos */
+@theme {
+  --font-sans: "Schibsted Grotesk", ui-sans-serif, system-ui, sans-serif;
+
+  --color-paper: #f4f6f3; /* fondo general */
+  --color-surface: #ffffff; /* tarjetas, barras, paneles */
+  --color-ink: #12223f; /* texto principal y único color de estado vivo */
+  --color-ink-hover: #1e3560;
+  --color-ink-soft: #4a5873; /* texto secundario */
+  --color-ink-faint: #5e6b82; /* letra pequeña: folios, rangos */
+  --color-rule: #dce2dd; /* bordes de superficies */
+  --color-control: #7a869b; /* bordes de campos y casillas (3:1) */
+  --color-verified: #087a57; /* identidad y tradición verificadas */
+  --color-pending: #8f6316; /* tradición pendiente de cotejo */
+  --color-unverified: #b3453a; /* sin verificar, errores */
+  --color-night: #12223f; /* pie de página */
+  --color-night-text: #c9d4de;
+  --color-night-faint: #a9b6c6;
+}
+
+@layer base {
+  html {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
+    scrollbar-color: var(--color-control) var(--color-paper);
+  }
+  body {
+    font-family: var(--font-sans);
+    /* Cifras proporcionales: las tabulares de esta fuente separan los puntos de miles.
+       Usa la clase tabular-nums solo donde haya columnas que alinear. */
+    font-variant-numeric: lining-nums proportional-nums;
+    caret-color: var(--color-ink);
+  }
+  ::selection {
+    background: #cfe7dd;
+    color: var(--color-ink);
+  }
+  a {
+    text-underline-offset: 3px;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* Control deslizante del total del mes: la perilla es una roseta de folio */
+  .folio-range {
+    appearance: none;
+    width: 100%;
+    height: 26px;
+    background: transparent;
+    cursor: pointer;
+  }
+  .folio-range::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 2px;
+    background: linear-gradient(to right, var(--color-ink) var(--fill, 50%), var(--color-rule) var(--fill, 50%));
+  }
+  .folio-range::-moz-range-track {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--color-rule);
+  }
+  .folio-range::-moz-range-progress {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--color-ink);
+  }
+  .folio-range::-webkit-slider-thumb {
+    appearance: none;
+    width: 26px;
+    height: 26px;
+    margin-top: -11px;
+    border-radius: 50%;
+    border: 1.5px solid var(--color-ink);
+    background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-10 -10 20 20'%3E%3Cg fill='none' stroke='%23087A57' stroke-width='.7'%3E%3Cellipse rx='9' ry='3.5'/%3E%3Cellipse rx='9' ry='3.5' transform='rotate(45)'/%3E%3Cellipse rx='9' ry='3.5' transform='rotate(90)'/%3E%3Cellipse rx='9' ry='3.5' transform='rotate(135)'/%3E%3C/g%3E%3C/svg%3E") center / 18px no-repeat;
+    transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .folio-range::-moz-range-thumb {
+    width: 23px;
+    height: 23px;
+    border-radius: 50%;
+    border: 1.5px solid var(--color-ink);
+    background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-10 -10 20 20'%3E%3Cg fill='none' stroke='%23087A57' stroke-width='.7'%3E%3Cellipse rx='9' ry='3.5'/%3E%3Cellipse rx='9' ry='3.5' transform='rotate(45)'/%3E%3Cellipse rx='9' ry='3.5' transform='rotate(90)'/%3E%3Cellipse rx='9' ry='3.5' transform='rotate(135)'/%3E%3C/g%3E%3C/svg%3E") center / 18px no-repeat;
+  }
+  .folio-range:active::-webkit-slider-thumb {
+    transform: scale(1.12) rotate(22deg);
+  }
+  .folio-range:focus-visible {
+    outline: none;
+  }
+  .folio-range:focus-visible::-webkit-slider-thumb {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 3px;
+  }
+  .folio-range:focus-visible::-moz-range-thumb {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 3px;
+  }
+
+  /* La roseta se dibuja trazo a trazo al entrar en pantalla */
+  /* 140 es más largo que el perímetro de cualquier elipse de la roseta */
+  .seal-stroke {
+    stroke-dasharray: 140;
+    stroke-dashoffset: 0;
+  }
+  .seal-draw .seal-stroke {
+    animation: seal-draw 1100ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: calc(var(--i, 0) * 70ms);
+  }
+  @keyframes seal-draw {
+    from {
+      stroke-dashoffset: 140;
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .seal-draw .seal-stroke {
+      animation: none;
+    }
+    .folio-range::-webkit-slider-thumb {
+      transition: none;
+    }
+  }
+}

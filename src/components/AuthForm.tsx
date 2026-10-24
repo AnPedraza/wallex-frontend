@@ -62,8 +62,8 @@ const validatePassword = (password: string, mode: AuthMode) => {
 };
 
 const inputClass = (hasError: boolean) =>
-  `w-full bg-[#F8F5F0] border rounded-xl p-3 text-sm text-[#2B1B17] focus:outline-none focus:ring-2 ${
-    hasError ? 'border-[#B3453A] focus:ring-[#B3453A]' : 'border-[#EAE4DC] focus:ring-[#2B1B17]'
+  `w-full bg-paper border rounded-lg p-3 text-sm text-ink focus:outline-none focus:ring-2 ${
+    hasError ? 'border-unverified focus:ring-unverified' : 'border-control focus:ring-ink'
   }`;
 
 export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'register', onSuccess }) => {
@@ -156,18 +156,18 @@ export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'register', on
     return (
       <div
         role="status"
-        className="bg-white p-6 rounded-2xl border border-[#EAE4DC] max-w-md w-full text-center space-y-2"
+        className="bg-white p-6 rounded-[10px] border border-rule max-w-md w-full text-center space-y-2"
       >
-        <div className="w-12 h-12 mx-auto rounded-full bg-[#2F7A5B]/10 text-[#2F7A5B] flex items-center justify-center">
-          <svg className="w-6 h-6 text-[#2F7A5B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+        <div className="w-12 h-12 mx-auto rounded-full bg-verified/10 text-verified flex items-center justify-center">
+          <svg className="w-6 h-6 text-verified" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h2 className="text-xl font-bold text-[#2B1B17]">
+        <h2 className="text-xl font-bold text-ink">
           {isRegister ? '¡Listo, ya tienes tu cuenta!' : '¡Hola de nuevo!'}
         </h2>
-        <p className="text-sm text-[#6E615A]">
-          Entraste como <strong className="text-[#2B1B17] break-all">{normalizedEmail}</strong>.
+        <p className="text-sm text-ink-soft">
+          Entraste como <strong className="text-ink break-all">{normalizedEmail}</strong>.
         </p>
       </div>
     );
@@ -180,14 +180,14 @@ export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'register', on
       onSubmit={handleSubmit}
       noValidate
       aria-labelledby={titleId}
-      className="bg-white p-6 rounded-2xl border border-[#EAE4DC] max-w-md w-full space-y-5"
+      className="bg-white p-6 rounded-[10px] border border-rule max-w-md w-full space-y-5"
     >
       <div className="space-y-1">
-        <h2 id={titleId} className="text-2xl font-bold text-[#2B1B17]">
+        <h2 id={titleId} className="text-2xl font-bold text-ink">
           {isRegister ? 'Crea tu cuenta' : 'Inicia sesión'}
         </h2>
         {isRegister && (
-          <p className="text-sm text-[#6E615A]">
+          <p className="text-sm text-ink-soft">
             Solo necesitas tu correo y una contraseña. Verificas tu identidad más adelante, cuando
             quieras escribirle a un propietario.
           </p>
@@ -195,7 +195,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'register', on
       </div>
 
       <div>
-        <label htmlFor={emailId} className="block text-sm font-semibold mb-2 text-[#4A3E39]">
+        <label htmlFor={emailId} className="block text-sm font-semibold mb-2 text-ink-soft">
           Correo electrónico
         </label>
         <input
@@ -216,14 +216,14 @@ export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'register', on
           className={inputClass(Boolean(errors.email))}
         />
         {errors.email && (
-          <p id={`${emailId}-error`} className="mt-1.5 text-xs text-[#B3453A]">
+          <p id={`${emailId}-error`} className="mt-1.5 text-xs text-unverified">
             {errors.email}
           </p>
         )}
       </div>
 
       <div>
-        <label htmlFor={passwordId} className="block text-sm font-semibold mb-2 text-[#4A3E39]">
+        <label htmlFor={passwordId} className="block text-sm font-semibold mb-2 text-ink-soft">
           Contraseña
         </label>
         <div className="relative">
@@ -248,24 +248,24 @@ export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'register', on
             onClick={() => setShowPassword((v) => !v)}
             aria-pressed={showPassword}
             aria-controls={passwordId}
-            className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-lg text-xs font-semibold text-[#8C5E3C] hover:bg-[#EAE4DC] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2B1B17]"
+            className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-lg text-xs font-semibold text-verified hover:bg-rule focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
           >
             {showPassword ? 'Ocultar' : 'Mostrar'}
           </button>
         </div>
-        <p id={`${passwordId}-hint`} className="mt-1.5 text-xs text-[#6E615A]">
+        <p id={`${passwordId}-hint`} className="mt-1.5 text-xs text-ink-soft">
           {isRegister ? `Mínimo ${MIN_PASSWORD} caracteres. ` : ''}Es un prototipo: no uses una
           contraseña de otro servicio.
         </p>
         {errors.password && (
-          <p id={`${passwordId}-error`} className="mt-1 text-xs text-[#B3453A]">
+          <p id={`${passwordId}-error`} className="mt-1 text-xs text-unverified">
             {errors.password}
           </p>
         )}
       </div>
 
       {formError && (
-        <p role="alert" className="text-sm bg-[#B3453A]/10 text-[#B3453A] border border-[#B3453A]/30 rounded-xl p-3">
+        <p role="alert" className="text-sm bg-unverified/10 text-unverified border border-unverified/30 rounded-lg p-3">
           {formError}
         </p>
       )}
@@ -273,23 +273,23 @@ export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'register', on
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-[#2B1B17] text-white font-semibold py-3 rounded-xl hover:bg-[#4A3E39] active:bg-[#1A100D] disabled:opacity-60 disabled:cursor-not-allowed transition-colors text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2B1B17] focus-visible:ring-offset-2"
+        className="w-full bg-ink text-white font-semibold py-3 rounded-lg hover:bg-ink-hover active:bg-ink disabled:opacity-60 disabled:cursor-not-allowed transition-colors text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
       >
         {loading ? (isRegister ? 'Creando cuenta…' : 'Entrando…') : isRegister ? 'Crear cuenta' : 'Entrar'}
       </button>
 
-      <p className="text-sm text-center text-[#6E615A]">
+      <p className="text-sm text-center text-ink-soft">
         {isRegister ? '¿Ya tienes cuenta?' : '¿Aún no tienes cuenta?'}{' '}
         <button
           type="button"
           onClick={switchMode}
-          className="font-semibold text-[#8C5E3C] hover:underline rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2B1B17]"
+          className="font-semibold text-verified hover:underline rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
         >
           {isRegister ? 'Inicia sesión' : 'Regístrate'}
         </button>
       </p>
 
-      <p className="text-xs text-center text-[#6E615A]">
+      <p className="text-xs text-center text-ink-soft">
         Tus datos quedan solo en este navegador; Wallex no los envía a ningún servidor.
       </p>
     </form>

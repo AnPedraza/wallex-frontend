@@ -112,7 +112,7 @@ export default function App() {
   const navLinks: NavLink[] = [
     { label: 'Buscar vivienda', href: '#buscar' },
     {
-      label: 'Comparador Lado a Lado',
+      label: 'Comparador lado a lado',
       href: '#comparar',
       badge: comparisonIds.length,
     },

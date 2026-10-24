@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import type { Property } from '../types/property';
-import { INITIAL_PROPERTIES, formatCOP } from '../data/mockProperties';
+import { INITIAL_PROPERTIES, TRANSPORT_PROFILES, calculateTotalMonthlyCost, formatCOP } from '../data/mockProperties';
 import { PropertyDetail } from './PropertyDetail';
+import { FolioSeal, type SealStatus } from './FolioSeal';
 import type { Property as DetailProperty } from '../data/properties';
 
 interface PropertyPortalProps {
@@ -11,399 +12,490 @@ interface PropertyPortalProps {
   onContactProperty?: (property: Property) => void;
 }
 
+type SortKey = 'total-asc' | 'total-desc' | 'area-desc';
+
+const RANGE_MIN = 1_500_000;
+const RANGE_MAX = 3_500_000;
+const RANGE_STEP = 50_000;
+const DEFAULT_MAX = 3_000_000;
+const BIN_SIZE = 250_000;
+
+// Nombres cortos para los perfiles de transporte de los datos
+const TRANSPORT_LABELS: Record<string, string> = {
+  standard: 'TransMilenio o SITP a diario',
+  hybrid: 'Bici y transporte público',
+  intensive: 'Muchos trayectos y transbordos',
+};
+
+const num = (value: number) => value.toLocaleString('es-CO');
+
+const sealStatus = (p: Property): SealStatus => (!p.verified ? 'unverified' : p.certified ? 'verified' : 'pending');
+
+const SEAL_TEXT: Record<SealStatus, { title: string; detail: string; className: string }> = {
+  verified: { title: 'Verificado', detail: 'identidad y tradición', className: 'text-verified' },
+  pending: { title: 'Tradición pendiente de cotejo', detail: 'identidad verificada', className: 'text-pending' },
+  unverified: { title: 'Sin verificar', detail: 'quien publica no ha mostrado su identidad', className: 'text-unverified' },
+};
+
+// Número de folio de ejemplo, estable por inmueble (no es una matrícula real)
+const sampleFolio = (p: Property) => {
+  let h = 0;
+  for (const ch of p.id + p.title) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const office = p.zone === 'Cedritos' ? '50N' : '50C';
+  return `${office}-${String(1_000_000 + (h % 8_999_999))}`;
+};
+
+const toDetail = (property: Property): DetailProperty => ({
+  ...property,
+  images: [property.image],
+  description: `${property.title} ubicado en ${property.location}. ${property.transitAccess}.`,
+  requiresCoSigner: property.requirements.guarantorRequired,
+  requirements: [
+    {
+      label: property.requirements.guarantorRequired ? 'Codeudor con finca raíz en Bogotá' : 'Sin codeudor con finca raíz',
+      required: property.requirements.guarantorRequired,
+      detail: property.requirements.notes,
+    },
+    {
+      label: `Demostración de ingresos de ${property.requirements.minIncomeMultiplier}x el valor de arriendo`,
+      required: true,
+    },
+  ],
+});
+
+// Cada dato se mantiene completo en una línea; los cortes caen entre datos
+const Segments: React.FC<{ items: string[]; joiner: string }> = ({ items, joiner }) => (
+  <>
+    {items.map((item, k) => (
+      <React.Fragment key={item}>
+        {k > 0 && joiner}
+        <span className="whitespace-nowrap">{item}</span>
+      </React.Fragment>
+    ))}
+  </>
+);
+
+const fieldClass =
+  'w-full bg-surface border border-control rounded-lg px-3 py-2.5 text-sm text-ink focus-visible:outline-2 focus-visible:outline-ink';
+
 export const PropertyPortal: React.FC<PropertyPortalProps> = ({
   comparisonIds = [],
   onToggleComparison,
   onOpenComparer,
   onContactProperty,
 }) => {
-  const [selectedZone, setSelectedZone] = useState<string>('Todas');
-  const [maxPrice, setMaxPrice] = useState<number>(3000000);
-  const [showKycModal, setShowKycModal] = useState<boolean>(false);
+  const [zone, setZone] = useState('Todas');
+  const [maxTotal, setMaxTotal] = useState(DEFAULT_MAX);
+  const [onlyVerified, setOnlyVerified] = useState(false);
+  const [noGuarantor, setNoGuarantor] = useState(false);
+  const [petsOk, setPetsOk] = useState(false);
+  const [transportId, setTransportId] = useState('standard');
+  const [sort, setSort] = useState<SortKey>('total-asc');
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [showKycModal, setShowKycModal] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [detailProperty, setDetailProperty] = useState<DetailProperty | null>(null);
 
-  // Filtrado de propiedades
-  const filteredProperties = INITIAL_PROPERTIES.filter((p) => {
-    const matchesZone = selectedZone === 'Todas' || p.location.includes(selectedZone) || p.zone === selectedZone;
-    const matchesPrice = p.price <= maxPrice;
-    return matchesZone && matchesPrice;
+  const multiplier = TRANSPORT_PROFILES.find((t) => t.id === transportId)?.multiplier ?? 1;
+  const zones = useMemo(() => Array.from(new Set(INITIAL_PROPERTIES.map((p) => p.zone))), []);
+
+  const withTotals = useMemo(
+    () =>
+      INITIAL_PROPERTIES.map((p) => ({
+        property: p,
+        transport: Math.round(p.estimatedTransportMonthly * multiplier),
+        total: calculateTotalMonthlyCost(p, multiplier),
+      })),
+    [multiplier]
+  );
+
+  // Todo menos el tope de precio: es lo que dibuja el histograma
+  const beforePrice = withTotals.filter(({ property: p }) => {
+    if (zone !== 'Todas' && p.zone !== zone) return false;
+    if (onlyVerified && !p.verified) return false;
+    if (noGuarantor && p.requirements.guarantorRequired) return false;
+    if (petsOk && !p.requirements.petsAllowed) return false;
+    return true;
   });
+
+  const results = beforePrice
+    .filter(({ total }) => total <= maxTotal)
+    .sort((a, b) =>
+      sort === 'total-asc' ? a.total - b.total : sort === 'total-desc' ? b.total - a.total : b.property.area - a.property.area
+    );
+
+  const bins = Array.from({ length: (RANGE_MAX - RANGE_MIN) / BIN_SIZE }, (_, k) => {
+    const from = RANGE_MIN + k * BIN_SIZE;
+    return { from, count: beforePrice.filter(({ total }) => total >= from && total < from + BIN_SIZE).length };
+  });
+  const tallest = Math.max(1, ...bins.map((b) => b.count));
+
+  const activeFilters =
+    (zone !== 'Todas' ? 1 : 0) + (maxTotal !== DEFAULT_MAX ? 1 : 0) + Number(onlyVerified) + Number(noGuarantor) + Number(petsOk);
+  const verifiedCount = results.filter((r) => r.property.verified).length;
+  const cheapest = results.length ? Math.min(...results.map((r) => r.total)) : 0;
+  const fill = `${((maxTotal - RANGE_MIN) / (RANGE_MAX - RANGE_MIN)) * 100}%`;
+
+  const resetFilters = () => {
+    setZone('Todas');
+    setMaxTotal(DEFAULT_MAX);
+    setOnlyVerified(false);
+    setNoGuarantor(false);
+    setPetsOk(false);
+    setTransportId('standard');
+  };
 
   const handleContact = (property: Property) => {
     setSelectedProperty(property);
-    if (onContactProperty) {
-      onContactProperty(property);
-    } else {
-      setShowKycModal(true);
-    }
+    if (onContactProperty) onContactProperty(property);
+    else setShowKycModal(true);
   };
 
   const handleContactFromDetail = (property: DetailProperty) => {
     setDetailProperty(null);
     const matched = INITIAL_PROPERTIES.find((p) => p.id === property.id);
-    if (matched) {
-      handleContact(matched);
-    }
+    if (matched) handleContact(matched);
   };
 
+  const checkbox = (id: string, label: string, checked: boolean, onChange: (v: boolean) => void) => (
+    <label htmlFor={id} className="flex items-center gap-2.5 py-1 text-sm cursor-pointer">
+      <input
+        id={id}
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="size-4 accent-ink cursor-pointer"
+      />
+      {label}
+    </label>
+  );
+
   return (
-    <div className="min-h-screen bg-[#F8F5F0] text-[#2B1B17] font-sans pb-24">
-      {/* Encabezado del Portal */}
-      <div className="max-w-7xl mx-auto px-6 pt-8 pb-4">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-[#2B1B17]">
-              Inmuebles disponibles en Bogotá
-            </h1>
-            <p className="text-[#6E615A] mt-1 text-sm">
-              Viviendas verificadas con precios transparentes, sin intermediarios ocultos ni cobros sorpresivos.
-            </p>
+    <div className="bg-paper min-h-screen pb-28">
+      <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-10 py-6 lg:py-8 lg:grid lg:grid-cols-[288px_minmax(0,1fr)] lg:gap-7 lg:items-start">
+        {/* Filtros: columna fija en escritorio, panel plegable en celular */}
+        <div className="lg:hidden mb-4 flex gap-3">
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((v) => !v)}
+            aria-expanded={filtersOpen}
+            aria-controls="filtros"
+            className="flex-1 flex items-center justify-between bg-surface border border-control rounded-lg px-4 py-3 text-sm font-semibold"
+          >
+            <span>Filtros{activeFilters > 0 ? ` (${activeFilters})` : ''}</span>
+            <svg className={`size-4 transition-transform ${filtersOpen ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+        </div>
+
+        <aside
+          id="filtros"
+          aria-label="Filtros"
+          className={`${filtersOpen ? 'block' : 'hidden'} lg:block bg-surface border border-rule rounded-[10px] p-5 mb-6 lg:mb-0 lg:sticky lg:top-[88px]`}
+        >
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-base font-bold">Filtrar</h2>
+            <button type="button" onClick={resetFilters} className="text-sm font-medium text-verified hover:underline">
+              Limpiar
+            </button>
           </div>
 
-          {/* Acceso directo a Comparador */}
-          {onOpenComparer && (
-            <button
-              type="button"
-              onClick={onOpenComparer}
-              className="flex items-center gap-2 bg-white border border-[#EAE4DC] hover:border-[#2B1B17] text-[#2B1B17] px-4 py-2.5 rounded-xl font-bold text-xs shadow-xs hover:shadow-md transition-all self-start md:self-auto"
-            >
-              <svg className="w-4 h-4 text-[#8C5E3C]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-              <span>Abrir Comparador Lado a Lado</span>
-              {comparisonIds.length > 0 && (
-                <span className="bg-[#2B1B17] text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
-                  {comparisonIds.length} seleccionada{comparisonIds.length === 1 ? '' : 's'}
-                </span>
-              )}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Contenedor Principal: Filtros + Grid de Inmuebles */}
-      <div className="max-w-7xl mx-auto px-6 py-6 grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* Sidebar de Filtros */}
-        <aside className="bg-white p-6 rounded-2xl shadow-xs border border-[#EAE4DC] h-fit space-y-6">
-          <h2 className="text-lg font-bold border-b border-[#EAE4DC] pb-3 text-[#2B1B17]">
-            Filtros de Búsqueda
-          </h2>
-
-          {/* Filtro por Zona / Barrio */}
-          <div>
-            <label className="block text-sm font-semibold mb-2 text-[#4A3E39]">
-              Barrio / Zona
+          <div className="mt-4 pt-4 border-t border-rule">
+            <label htmlFor="f-zona" className="block text-[13px] font-semibold text-ink-soft mb-2">
+              Zona
             </label>
-            <select
-              value={selectedZone}
-              onChange={(e) => setSelectedZone(e.target.value)}
-              className="w-full bg-[#F8F5F0] border border-[#EAE4DC] rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#2B1B17]"
-            >
+            <select id="f-zona" value={zone} onChange={(e) => setZone(e.target.value)} className={fieldClass}>
               <option value="Todas">Todas las zonas</option>
-              <option value="Chapinero">Chapinero</option>
-              <option value="Teusaquillo">Teusaquillo</option>
-              <option value="Cedritos">Cedritos</option>
+              {zones.map((z) => (
+                <option key={z} value={z}>
+                  {z}
+                </option>
+              ))}
             </select>
           </div>
 
-          {/* Filtro por Presupuesto Máximo */}
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <label className="text-sm font-semibold text-[#4A3E39]">Presupuesto Máximo</label>
-              <span className="text-xs font-bold text-[#8C5E3C]">
-                ${maxPrice.toLocaleString('es-CO')}
+          <div className="mt-4 pt-4 border-t border-rule">
+            <label htmlFor="f-total" className="block text-[13px] font-semibold text-ink-soft">
+              Total del mes máximo
+            </label>
+            <div className="flex items-baseline justify-between mt-1">
+              <output htmlFor="f-total" className="text-xl font-extrabold tracking-[-0.02em]">
+                {formatCOP(maxTotal)}
+              </output>
+              <span className="text-[13px] text-ink-soft">
+                {results.length} de {beforePrice.length}
               </span>
             </div>
+            <div className="flex items-end gap-[3px] h-9 mt-3" aria-hidden="true">
+              {bins.map((b) => (
+                <span
+                  key={b.from}
+                  className={`flex-1 rounded-t-[2px] ${b.from < maxTotal ? 'bg-ink' : 'bg-rule'}`}
+                  style={{ height: b.count ? `${(b.count / tallest) * 100}%` : '2px' }}
+                />
+              ))}
+            </div>
             <input
+              id="f-total"
               type="range"
-              min="1000000"
-              max="3500000"
-              step="100000"
-              value={maxPrice}
-              onChange={(e) => setMaxPrice(Number(e.target.value))}
-              className="w-full accent-[#2B1B17]"
+              min={RANGE_MIN}
+              max={RANGE_MAX}
+              step={RANGE_STEP}
+              value={maxTotal}
+              onChange={(e) => setMaxTotal(Number(e.target.value))}
+              aria-valuetext={formatCOP(maxTotal)}
+              className="folio-range -mt-px"
+              style={{ ['--fill' as string]: fill } as React.CSSProperties}
             />
+            <div className="flex justify-between text-xs text-ink-faint">
+              <span>{formatCOP(RANGE_MIN)}</span>
+              <span>{formatCOP(RANGE_MAX)}</span>
+            </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              setSelectedZone('Todas');
-              setMaxPrice(3000000);
-            }}
-            className="w-full text-xs font-semibold text-[#8C5E3C] hover:underline text-center pt-2"
-          >
-            Restablecer filtros
-          </button>
+          <div className="mt-4 pt-4 border-t border-rule">
+            <label htmlFor="f-verificados" className="flex items-center justify-between gap-3 text-sm cursor-pointer">
+              Solo quien publica verificado
+              <input
+                id="f-verificados"
+                type="checkbox"
+                role="switch"
+                checked={onlyVerified}
+                onChange={(e) => setOnlyVerified(e.target.checked)}
+                className="peer sr-only"
+              />
+              <span
+                aria-hidden="true"
+                className="relative w-10 h-6 shrink-0 rounded-full bg-control transition-colors peer-checked:bg-verified peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink after:absolute after:top-1 after:left-1 after:size-4 after:rounded-full after:bg-surface after:transition-transform peer-checked:after:translate-x-4"
+              />
+            </label>
+          </div>
+
+          <div role="group" aria-labelledby="f-requisitos" className="mt-4 pt-4 border-t border-rule">
+            <p id="f-requisitos" className="text-[13px] font-semibold text-ink-soft mb-1.5">
+              Requisitos
+            </p>
+            {checkbox('f-codeudor', 'Sin codeudor', noGuarantor, setNoGuarantor)}
+            {checkbox('f-mascotas', 'Acepta mascotas', petsOk, setPetsOk)}
+          </div>
+
+          <div className="mt-4 pt-4 border-t border-rule">
+            <label htmlFor="f-transporte" className="block text-[13px] font-semibold text-ink-soft mb-2">
+              Cómo te mueves
+            </label>
+            <select id="f-transporte" value={transportId} onChange={(e) => setTransportId(e.target.value)} className={fieldClass}>
+              {TRANSPORT_PROFILES.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {TRANSPORT_LABELS[t.id] ?? t.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-ink-faint mt-2">Cambia el transporte estimado de cada inmueble.</p>
+          </div>
         </aside>
 
-        {/* Listado / Grid de Propiedades */}
-        <main className="lg:col-span-3 space-y-6">
-          <div className="flex justify-between items-center text-sm text-[#6E615A]">
-            <span>Mostrando {filteredProperties.length} propiedades encontradas</span>
-            <span className="text-xs text-[#8C5E3C] font-medium">
-              Puedes seleccionar hasta 3 propiedades para comparar lado a lado
-            </span>
+        <section aria-labelledby="titulo-catalogo">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-5">
+            <div>
+              <h1 id="titulo-catalogo" className="text-[2rem] sm:text-[2.375rem] font-extrabold tracking-[-0.03em] leading-none">
+                Arriendos en Bogotá
+              </h1>
+              <p className="text-[15px] text-ink-soft mt-2.5">
+                {results.length > 0 ? (
+                  <>
+                    <b className="text-ink">
+                      {results.length} {results.length === 1 ? 'inmueble' : 'inmuebles'}
+                    </b>{' '}
+                    con la misma ficha · <b className="text-ink">{verifiedCount}</b> con identidad verificada · desde{' '}
+                    <b className="text-ink">{formatCOP(cheapest)}</b> al mes
+                  </>
+                ) : (
+                  'Ningún inmueble cumple estos filtros.'
+                )}
+              </p>
+            </div>
+            <div className="sm:w-56">
+              <label htmlFor="f-orden" className="block text-[13px] text-ink-soft mb-1.5">
+                Ordenar por
+              </label>
+              <select id="f-orden" value={sort} onChange={(e) => setSort(e.target.value as SortKey)} className={fieldClass}>
+                <option value="total-asc">Menor total del mes</option>
+                <option value="total-desc">Mayor total del mes</option>
+                <option value="area-desc">Más metros cuadrados</option>
+              </select>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {filteredProperties.map((property) => {
-              const isSelectedForCompare = comparisonIds.includes(property.id);
-              const estTotalCost = property.price + property.adminFee + property.estimatedTransportMonthly;
+          {results.length === 0 ? (
+            <div className="bg-surface border border-rule rounded-[10px] px-6 py-12 text-center">
+              <p className="text-lg font-bold">No hay arriendos con esos filtros</p>
+              <p className="text-sm text-ink-soft mt-1.5">Prueba subir el tope del total del mes o quitar un requisito.</p>
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="mt-5 bg-ink text-white font-semibold text-sm px-5 py-2.5 rounded-lg hover:bg-ink-hover"
+              >
+                Limpiar filtros
+              </button>
+            </div>
+          ) : (
+            <ul className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+              {results.map(({ property, transport, total }) => {
+                const inCompare = comparisonIds.includes(property.id);
+                const status = sealStatus(property);
+                const seal = SEAL_TEXT[status];
+                const req = property.requirements;
+                const openDetail = () => setDetailProperty(toDetail(property));
 
-              // Propiedad adaptada para PropertyDetail si se abre
-              const detailCompatibleProp = {
-                ...property,
-                images: [property.image],
-                description: `${property.title} ubicado en ${property.location}. ${property.transitAccess}.`,
-                requiresCoSigner: property.requirements.guarantorRequired,
-                requirements: [
-                  {
-                    label: property.requirements.guarantorRequired ? 'Codeudor con finca raíz en Bogotá' : 'Sin codeudor con finca raíz',
-                    required: property.requirements.guarantorRequired,
-                    detail: property.requirements.notes,
-                  },
-                  {
-                    label: `Demostración de ingresos de ${property.requirements.minIncomeMultiplier}x el valor de arriendo`,
-                    required: true,
-                  },
-                ],
-              };
-
-              return (
-                <div
-                  key={property.id}
-                  className={`bg-white rounded-2xl overflow-hidden border transition-all flex flex-col justify-between ${
-                    isSelectedForCompare
-                      ? 'border-[#2B1B17] ring-2 ring-[#2B1B17]/20 shadow-md'
-                      : 'border-[#EAE4DC] shadow-xs hover:shadow-md'
-                  }`}
-                >
-                  {/* Imagen del Inmueble */}
-                  <div>
-                    <div className="relative h-48 w-full bg-gray-200">
-                      <button
-                        type="button"
-                        onClick={() => setDetailProperty(detailCompatibleProp)}
-                        aria-label={`Ver ficha completa de ${property.title}`}
-                        className="block w-full h-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#2B1B17]"
-                      >
-                        <img
-                          src={property.image}
-                          alt={property.title}
-                          className="w-full h-full object-cover"
-                        />
-                      </button>
-
-                      {property.verified && (
-                        <span className="absolute top-3 left-3 bg-[#2B1B17] text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider pointer-events-none">
-                          Identidad Verificada
-                        </span>
-                      )}
-                      {property.certified && (
-                        <span className="absolute top-3 right-3 bg-[#D9A76A] text-[#2B1B17] text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider pointer-events-none">
-                          Certificado de Tradición
-                        </span>
-                      )}
-
-                      {/* Botón Flotante para Comparar en la Imagen */}
+                return (
+                  <li key={property.id} className="bg-surface border border-rule rounded-[10px] overflow-hidden flex flex-col">
+                    <div className="relative aspect-[16/10] bg-rule">
+                      <img src={property.image} alt="" className="absolute inset-0 size-full object-cover" loading="lazy" />
                       {onToggleComparison && (
                         <button
                           type="button"
                           onClick={() => onToggleComparison(property.id)}
-                          className={`absolute bottom-3 right-3 text-xs font-extrabold px-3 py-1.5 rounded-xl backdrop-blur-md transition-all shadow-md flex items-center gap-1.5 ${
-                            isSelectedForCompare
-                              ? 'bg-[#2B1B17] text-white ring-2 ring-white/50'
-                              : 'bg-white/90 hover:bg-white text-[#2B1B17]'
+                          aria-pressed={inCompare}
+                          aria-label={`${inCompare ? 'Quitar del comparador' : 'Agregar al comparador'}: ${property.title}`}
+                          className={`absolute top-2.5 right-2.5 flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[13px] font-semibold transition-colors ${
+                            inCompare ? 'bg-ink text-white' : 'bg-surface text-ink hover:bg-paper'
                           }`}
                         >
-                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                            {isSelectedForCompare ? (
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                            ) : (
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                          <span
+                            aria-hidden="true"
+                            className={`size-[15px] rounded-[3px] border-[1.5px] flex items-center justify-center ${
+                              inCompare ? 'border-white bg-white' : 'border-ink'
+                            }`}
+                          >
+                            {inCompare && (
+                              <svg viewBox="0 0 12 12" className="size-2.5" fill="none" stroke="var(--color-ink)" strokeWidth="2">
+                                <path d="M2.5 6.2l2.3 2.3 4.7-5" />
+                              </svg>
                             )}
-                          </svg>
-                          <span>{isSelectedForCompare ? 'En Comparador' : 'Comparar'}</span>
+                          </span>
+                          {inCompare ? 'En comparador' : 'Comparar'}
                         </button>
                       )}
                     </div>
 
-                    {/* Contenido de la Tarjeta */}
-                    <div className="p-5 space-y-3">
-                      <div>
-                        <span className="text-xs font-semibold text-[#8C5E3C]">
-                          {property.location}
-                        </span>
-                        <h3
-                          onClick={() => setDetailProperty(detailCompatibleProp)}
-                          className="text-lg font-bold text-[#2B1B17] mt-1 cursor-pointer hover:underline"
-                        >
+                    <div className="px-4 pt-3.5 pb-3 flex-1">
+                      <h3 className="text-[17px] font-bold tracking-[-0.01em] leading-snug">
+                        <button type="button" onClick={openDetail} className="text-left hover:underline">
                           {property.title}
-                        </h3>
-                        <div className="text-2xl font-extrabold text-[#2B1B17] mt-2">
-                          {formatCOP(property.price)}{' '}
-                          <span className="text-xs font-normal text-[#6E615A]">/ mes</span>
-                        </div>
-                        <p className="text-xs text-[#6E615A] mt-0.5">
-                          + {formatCOP(property.adminFee)} administración
-                        </p>
-                      </div>
-
-                      {/* Costo Total Real Estimado */}
-                      <div className="bg-[#F8F5F0] p-3 rounded-xl border border-[#EAE4DC] text-xs">
-                        <div className="flex justify-between items-center">
-                          <span className="text-[#6E615A] font-medium">Costo Total Mensual estimado:</span>
-                          <strong className="text-[#2B1B17]">{formatCOP(estTotalCost)}</strong>
-                        </div>
-                        <span className="text-[10px] text-[#8C5E3C] block mt-0.5 font-medium">
-                          (Incluye {formatCOP(property.estimatedTransportMonthly)} de transporte estimado en Bogotá)
-                        </span>
-                      </div>
-
-                      {/* Requisitos destacados */}
-                      <div className="text-[11px] text-[#4A3E39]">
-                        {!property.requirements.guarantorRequired ? (
-                          <span className="text-emerald-700 font-bold">Sin codeudor de finca raíz</span>
-                        ) : (
-                          <span className="text-amber-800 font-medium">Requiere codeudor solidario</span>
-                        )}
-                        <span className="mx-1.5 text-gray-300">•</span>
-                        <span>Depósito: {property.requirements.depositMonths} mes</span>
-                      </div>
-
-                      {/* Detalles del espacio */}
-                      <div className="flex items-center gap-4 text-xs font-medium text-[#6E615A] border-t border-[#F8F5F0] pt-3">
-                        <span>{property.area} m² construidos</span>
-                        <span className="text-gray-300">•</span>
-                        <span>{property.bedrooms} Hab</span>
-                        <span className="text-gray-300">•</span>
-                        <span>{property.bathrooms} Baños</span>
-                      </div>
+                        </button>
+                      </h3>
+                      <p className="text-[13px] text-ink-soft mt-1">
+                        {property.area} m² · {property.bedrooms} hab · {property.bathrooms} {property.bathrooms === 1 ? 'baño' : 'baños'} ·{' '}
+                        {property.location.replace(', Bogotá', '')}
+                      </p>
+                      <p className="mt-3 flex items-baseline gap-1.5">
+                        <strong className="text-[28px] font-extrabold tracking-[-0.02em] leading-none">{formatCOP(total)}</strong>
+                        <span className="text-[13px] text-ink-soft">al mes</span>
+                      </p>
+                      <p className="text-[12.5px] text-ink-soft mt-1.5">
+                        <Segments items={[`Canon ${num(property.price)}`, `admin ${num(property.adminFee)}`, `transporte ${num(transport)}`]} joiner=" + " />
+                      </p>
+                      <p className="text-[13px] mt-2.5">
+                        <Segments
+                          items={[
+                            req.guarantorRequired ? 'Pide codeudor' : 'Sin codeudor',
+                            `depósito ${formatCOP(property.deposit)}`,
+                            `mascotas ${req.petsAllowed ? 'sí' : 'no'}`,
+                          ]}
+                          joiner=" · "
+                        />
+                      </p>
                     </div>
-                  </div>
 
-                  {/* Botones de Acción */}
-                  <div className="p-5 pt-0 space-y-2">
-                    <button
-                      type="button"
-                      onClick={() => setDetailProperty(detailCompatibleProp)}
-                      className="w-full bg-[#F8F5F0] hover:bg-[#EAE4DC] text-[#2B1B17] font-semibold py-2 rounded-xl transition-colors text-xs border border-[#EAE4DC]"
-                    >
-                      Ver Ficha Estandarizada
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleContact(property)}
-                      className="w-full bg-[#2B1B17] text-white font-medium py-2.5 rounded-xl hover:bg-[#4A3E39] transition-colors text-sm"
-                    >
-                      Contactar Propietario
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </main>
+                    <div className="flex items-center gap-3 px-4 py-2.5 border-t border-rule">
+                      <FolioSeal seed={property.id} status={status} />
+                      <p className="text-[12.5px] leading-snug">
+                        <span className={`font-bold ${seal.className}`}>{seal.title}</span> · {seal.detail}
+                        <br />
+                        <span className="text-ink-faint">
+                          {property.verified ? `Folio ${sampleFolio(property)} (ejemplo)` : 'Sin folio registrado'}
+                        </span>
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 px-4 pb-4">
+                      <button
+                        type="button"
+                        onClick={openDetail}
+                        className="border border-ink rounded-lg py-2 text-sm font-semibold hover:bg-paper"
+                      >
+                        Ver ficha
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleContact(property)}
+                        className="bg-ink text-white rounded-lg py-2 text-sm font-semibold hover:bg-ink-hover"
+                      >
+                        Contactar
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
       </div>
 
-      {/* BARRA FLOTANTE DE COMPARACIÓN (Sticky Bottom Bar) */}
+      {/* Barra del comparador */}
       {comparisonIds.length > 0 && onOpenComparer && (
-        <div className="fixed bottom-4 inset-x-0 z-40 px-4 flex justify-center">
-          <div className="bg-[#2B1B17] text-white rounded-2xl p-4 shadow-2xl flex flex-wrap items-center justify-between gap-4 max-w-3xl w-full border border-[#4A3E39] backdrop-blur-md">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-[#4A3E39] flex items-center justify-center text-white">
-                <svg className="w-4 h-4 text-[#D9A76A]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-              </div>
-              <div>
-                <span className="text-sm font-extrabold block">
-                  {comparisonIds.length} {comparisonIds.length === 1 ? 'propiedad seleccionada' : 'propiedades seleccionadas'} (Máximo 3)
-                </span>
-                <span className="text-[11px] text-[#D9A76A]">
-                  Compara Arriendo + Administración + Transporte lado a lado
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={onOpenComparer}
-                className="bg-[#D9A76A] hover:bg-[#e0b57e] text-[#2B1B17] font-extrabold text-xs px-5 py-2.5 rounded-xl transition-all shadow-md hover:scale-102"
-              >
-                Ver Comparador Lado a Lado ({comparisonIds.length}) →
-              </button>
-            </div>
+        <div className="fixed bottom-4 inset-x-0 z-30 px-4 flex justify-center pointer-events-none">
+          <div className="pointer-events-auto bg-ink text-white rounded-[10px] pl-5 pr-2 py-2 flex items-center gap-5 ring-1 ring-white/15">
+            <p className="text-sm">
+              <b>
+                {comparisonIds.length} de 3
+              </b>{' '}
+              para comparar<span className="hidden sm:inline"> lado a lado</span>
+            </p>
+            <button
+              type="button"
+              onClick={onOpenComparer}
+              className="bg-surface text-ink font-semibold text-sm px-4 py-2 rounded-lg hover:bg-paper focus-visible:outline-white"
+            >
+              Abrir comparador
+            </button>
           </div>
         </div>
       )}
 
-      {/* Modal Ficha Estandarizada */}
       {detailProperty && (
-        <PropertyDetail
-          property={detailProperty}
-          onClose={() => setDetailProperty(null)}
-          onContact={handleContactFromDetail}
-        />
+        <PropertyDetail property={detailProperty} onClose={() => setDetailProperty(null)} onContact={handleContactFromDetail} />
       )}
 
-      {/* Modal KYC de Verificación (Mockups 03 y 04) */}
+      {/* KYC de respaldo, solo si quien integra no pasa onContactProperty */}
       {showKycModal && selectedProperty && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-[#EAE4DC] space-y-5 relative">
+        <div className="fixed inset-0 bg-ink/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-surface rounded-[10px] p-6 max-w-md w-full border border-rule space-y-5 relative">
             <button
               type="button"
               onClick={() => setShowKycModal(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 w-8 h-8 rounded-full flex items-center justify-center"
+              className="absolute top-4 right-4 text-ink-soft hover:text-ink size-8 rounded-full flex items-center justify-center"
               aria-label="Cerrar"
             >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-
-            <div className="text-center space-y-2">
-              <div className="w-12 h-12 bg-[#F8F5F0] text-[#2B1B17] rounded-full flex items-center justify-center mx-auto">
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-[#2B1B17]">
-                Verifica tu identidad para contactar
-              </h3>
-              <p className="text-xs text-[#6E615A]">
-                Para proteger a ambas partes, Wallex requiere verificar tu perfil antes de agendar una cita o enviar un mensaje para{' '}
-                <span className="font-semibold">{selectedProperty.title}</span>.
-              </p>
-            </div>
-
-            <div className="space-y-3 bg-[#F8F5F0] p-4 rounded-2xl border border-[#EAE4DC] text-xs">
-              <div className="flex items-center gap-2 text-[#2B1B17] font-semibold">
-                <svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-                <span>Cédula de Ciudadanía cargada</span>
-              </div>
-              <div className="flex items-center gap-2 text-[#2B1B17] font-semibold">
-                <svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-                <span>Verificación facial biométrica</span>
-              </div>
-            </div>
-
+            <h3 className="text-xl font-bold pr-8">Verifica tu identidad para contactar</h3>
+            <p className="text-sm text-ink-soft">
+              Para proteger a ambas partes, Wallex verifica tu perfil antes de compartir el contacto de{' '}
+              <span className="font-semibold text-ink">{selectedProperty.title}</span>.
+            </p>
             <button
               type="button"
               onClick={() => {
-                alert('¡Verificación KYC completada! Los datos de contacto del propietario han sido enviados a tu correo.');
+                alert('Verificación simulada: en este prototipo no se envía ningún correo.');
                 setShowKycModal(false);
               }}
-              className="w-full bg-[#2B1B17] text-white font-semibold py-3 rounded-xl hover:bg-[#4A3E39] transition-colors text-sm shadow-md"
+              className="w-full bg-ink text-white font-semibold py-3 rounded-lg hover:bg-ink-hover text-sm"
             >
-              Completar Verificación KYC
+              Completar verificación
             </button>
           </div>
         </div>

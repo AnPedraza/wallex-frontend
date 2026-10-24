@@ -20,8 +20,7 @@ const defaultLinks: NavLink[] = [
   { label: 'Comparador Lado a Lado', href: '#comparar' },
 ];
 
-const focusRing =
-  'focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2B1B17] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F8F5F0]';
+const focusRing = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink';
 
 export const Navbar: React.FC<NavbarProps> = ({
   user = null,
@@ -48,12 +47,18 @@ export const Navbar: React.FC<NavbarProps> = ({
   // Sin hash (o en el inicio) la sección activa es la primera
   const activeHref = links.find((l) => l.href === hash)?.href ?? (hash ? undefined : links[0]?.href);
 
+  // Pestaña activa: subrayado verde de verificación, como el sello del folio
   const linkClass = (href: string) =>
-    `px-3 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors flex items-center gap-1.5 ${focusRing} ${
+    `relative flex items-center gap-2 px-1 py-[22px] text-[15px] whitespace-nowrap transition-colors ${focusRing} ${
       href === activeHref
-        ? 'bg-[#2B1B17] text-white'
-        : 'text-[#4A3E39] hover:bg-[#EAE4DC]'
+        ? 'text-ink font-semibold after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-verified'
+        : 'text-ink-soft hover:text-ink'
     }`;
+  const mobileLinkClass = (href: string) =>
+    `flex items-center justify-between rounded-lg px-3 py-3 text-[15px] ${focusRing} ${
+      href === activeHref ? 'bg-paper text-ink font-semibold' : 'text-ink-soft hover:bg-paper'
+    }`;
+  const badgeClass = 'min-w-5 rounded-full bg-ink px-1.5 text-center text-xs font-semibold leading-5 text-white';
 
   const handleLogin = () => {
     setMenuOpen(false);
@@ -66,16 +71,16 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-[#F8F5F0]/95 backdrop-blur border-b border-[#EAE4DC] text-[#2B1B17]">
-      <nav aria-label="Principal" className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between gap-4">
+    <header className="sticky top-0 z-40 bg-surface border-b border-rule text-ink">
+      <nav aria-label="Principal" className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 h-[68px] flex items-center justify-between gap-6">
         <a href="#buscar" className={`flex items-center gap-2 rounded-lg ${focusRing}`}>
           <img src={logo} alt="" className="h-10 w-10" />
-          <span className="text-xl font-bold tracking-tight">Wallex</span>
+          <span className="text-[21px] font-extrabold tracking-[-0.02em]">Wallex</span>
         </a>
 
         {/* Escritorio */}
-        <div className="hidden lg:flex items-center gap-6">
-          <ul className="flex items-center gap-1">
+        <div className="hidden lg:flex flex-1 items-center gap-8 pl-6">
+          <ul className="flex items-center gap-7">
             {links.map((link) => (
               <li key={link.href}>
                 <a
@@ -84,31 +89,21 @@ export const Navbar: React.FC<NavbarProps> = ({
                   className={linkClass(link.href)}
                 >
                   <span>{link.label}</span>
-                  {link.badge !== undefined && link.badge > 0 && (
-                    <span
-                      className={`text-[10px] font-extrabold px-1.5 py-0.2 rounded-full ${
-                        link.href === activeHref
-                          ? 'bg-[#D9A76A] text-[#2B1B17]'
-                          : 'bg-[#2B1B17] text-white'
-                      }`}
-                    >
-                      {link.badge}
-                    </span>
-                  )}
+                  {link.badge !== undefined && link.badge > 0 && <span className={badgeClass}>{link.badge}</span>}
                 </a>
               </li>
             ))}
           </ul>
 
           {user ? (
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-[#6E615A] max-w-[16rem] truncate" title={user.email}>
+            <div className="ml-auto flex items-center gap-3">
+              <span className="text-sm text-ink-soft max-w-[16rem] truncate" title={user.email}>
                 {user.email}
               </span>
               <button
                 type="button"
                 onClick={handleLogout}
-                className={`px-4 py-2 rounded-xl text-sm font-semibold border border-[#EAE4DC] bg-white hover:bg-[#EAE4DC] transition-colors ${focusRing}`}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold border border-control hover:bg-paper transition-colors ${focusRing}`}
               >
                 Salir
               </button>
@@ -117,7 +112,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               type="button"
               onClick={handleLogin}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold bg-[#2B1B17] text-white hover:bg-[#4A3E39] transition-colors ${focusRing}`}
+              className={`ml-auto px-[18px] py-2.5 rounded-lg text-sm font-semibold bg-ink text-white hover:bg-ink-hover transition-colors ${focusRing}`}
             >
               Ingresar / Crear cuenta
             </button>
@@ -131,7 +126,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           aria-expanded={menuOpen}
           aria-controls="menu-movil"
           aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
-          className={`lg:hidden w-11 h-11 flex items-center justify-center rounded-xl hover:bg-[#EAE4DC] ${focusRing}`}
+          className={`lg:hidden size-11 flex items-center justify-center rounded-lg hover:bg-paper ${focusRing}`}
         >
           <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
             {menuOpen ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
@@ -140,7 +135,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       </nav>
 
       {menuOpen && (
-        <div id="menu-movil" className="lg:hidden border-t border-[#EAE4DC] bg-[#F8F5F0] px-6 py-4 space-y-4">
+        <div id="menu-movil" className="lg:hidden border-t border-rule bg-surface px-4 sm:px-6 py-4 space-y-4">
           <ul className="space-y-1">
             {links.map((link) => (
               <li key={link.href}>
@@ -148,29 +143,25 @@ export const Navbar: React.FC<NavbarProps> = ({
                   href={link.href}
                   onClick={() => setMenuOpen(false)}
                   aria-current={link.href === activeHref ? 'page' : undefined}
-                  className={`block ${linkClass(link.href)} py-3`}
+                  className={mobileLinkClass(link.href)}
                 >
                   <span>{link.label}</span>
-                  {link.badge !== undefined && link.badge > 0 && (
-                    <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-[#2B1B17] text-white">
-                      {link.badge}
-                    </span>
-                  )}
+                  {link.badge !== undefined && link.badge > 0 && <span className={badgeClass}>{link.badge}</span>}
                 </a>
               </li>
             ))}
           </ul>
 
-          <div className="border-t border-[#EAE4DC] pt-4">
+          <div className="border-t border-rule pt-4">
             {user ? (
               <div className="flex items-center justify-between gap-3">
-                <span className="text-sm text-[#6E615A] truncate" title={user.email}>
+                <span className="text-sm text-ink-soft truncate" title={user.email}>
                   {user.email}
                 </span>
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold border border-[#EAE4DC] bg-white hover:bg-[#EAE4DC] ${focusRing}`}
+                  className={`shrink-0 px-4 py-2 rounded-lg text-sm font-semibold border border-control hover:bg-paper ${focusRing}`}
                 >
                   Salir
                 </button>
@@ -179,7 +170,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 type="button"
                 onClick={handleLogin}
-                className={`w-full py-3 rounded-xl text-sm font-semibold bg-[#2B1B17] text-white hover:bg-[#4A3E39] ${focusRing}`}
+                className={`w-full py-3 rounded-lg text-sm font-semibold bg-ink text-white hover:bg-ink-hover ${focusRing}`}
               >
                 Ingresar / Crear cuenta
               </button>
