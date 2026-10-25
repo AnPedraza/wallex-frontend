@@ -139,7 +139,7 @@ const ChaosFicha: React.FC<{ lit: (s: Slot) => boolean; rowRef?: (s: Slot) => (e
 
 const copyA = (
   <>
-    <h2 className="text-[2rem] lg:text-[3.25rem] leading-[1.02] font-extrabold tracking-[-0.03em] text-white">Hoy buscar arriendo se ve así.</h2>
+    <h2 className="text-[2rem] lg:text-[3.25rem] leading-[1.08] font-extrabold tracking-[-0.03em] text-white">Hoy buscar arriendo se ve así.</h2>
     <p className="mt-4 text-[17px] text-night-text max-w-[44ch]">
       Buscas en Facebook, Marketplace y grupos de WhatsApp a la vez, y en ninguno te dicen todo.
     </p>
@@ -148,7 +148,7 @@ const copyA = (
 
 const copyB = (
   <>
-    <h2 className="text-[2rem] lg:text-[3.25rem] leading-[1.02] font-extrabold tracking-[-0.03em] text-white">En Wallex cada respuesta tiene su lugar.</h2>
+    <h2 className="text-[2rem] lg:text-[3.25rem] leading-[1.08] font-extrabold tracking-[-0.03em] text-white">En Wallex cada respuesta tiene su lugar.</h2>
     <p className="mt-4 text-[17px] text-night-text max-w-[44ch]">
       El precio con todo incluido, lo que te piden y quién publica, siempre en la misma ficha.
     </p>

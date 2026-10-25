@@ -311,7 +311,7 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
         <section aria-labelledby="titulo-catalogo">
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-5">
             <div>
-              <h1 id="titulo-catalogo" className="text-[2rem] sm:text-[2.375rem] font-extrabold tracking-[-0.03em] leading-none">
+              <h1 id="titulo-catalogo" className="text-[2rem] sm:text-[2.375rem] font-extrabold tracking-[-0.03em] leading-[1.08]">
                 Arriendos en Bogotá
               </h1>
               <p className="text-[15px] text-ink-soft mt-2.5">

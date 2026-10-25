@@ -29,13 +29,24 @@ const readSession = (): SessionUser | null => {
 
 export default function App() {
   const [user, setUser] = useState<SessionUser | null>(readSession);
-  const [authOpen, setAuthOpen] = useState(false);
+  // "Ingresar" de la landing llega con ?ingresar y abre el inicio de sesión de una vez
+  const fromLandingLogin = () => new URLSearchParams(window.location.search).has('ingresar');
+  const [authOpen, setAuthOpen] = useState(() => fromLandingLogin() && !readSession());
+  const [authMode, setAuthMode] = useState<'login' | 'register'>(() => (fromLandingLogin() ? 'login' : 'register'));
   const [currentHash, setCurrentHash] = useState(() => window.location.hash || '#buscar');
   const [comparisonIds, setComparisonIds] = useState<string[]>(['1', '3']); // Inicialmente 2 propiedades (Chapinero Alto vs Cedritos)
   const [contactingProperty, setContactingProperty] = useState<Property | null>(null);
   // Perfil de transporte compartido: el total del mes es el mismo en catálogo, ficha y comparador
   const [transportProfileId, setTransportProfileId] = useState('standard');
   const modalRef = useRef<HTMLDivElement>(null);
+
+  // Quitar ?ingresar de la dirección para que al recargar no se vuelva a abrir
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has('ingresar')) return;
+    url.searchParams.delete('ingresar');
+    window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+  }, []);
 
   // Escuchar cambios de hash para navegación (#buscar o #comparar)
   useEffect(() => {
@@ -126,7 +137,10 @@ export default function App() {
       <Navbar
         user={user}
         onLogout={handleLogout}
-        onLoginClick={() => setAuthOpen(true)}
+        onLoginClick={() => {
+          setAuthMode('register');
+          setAuthOpen(true);
+        }}
         links={navLinks}
       />
 
@@ -180,6 +194,7 @@ export default function App() {
             className="relative w-full max-w-md"
           >
             <AuthForm
+              initialMode={authMode}
               onSuccess={(u) => {
                 setUser(u);
                 closeAuth();

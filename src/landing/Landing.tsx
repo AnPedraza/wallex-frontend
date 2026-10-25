@@ -43,25 +43,45 @@ const STEPS: { part: FichaPart; n: number; title: string; body: string }[] = [
   },
 ];
 
-// Barra superior propia de la landing: solo marca y la salida a la app
+// Barra superior propia de la landing: a la izquierda la marca y las secciones de esta página,
+// a la derecha la cuenta y la búsqueda
 const Header: React.FC = () => (
   <header className="sticky top-0 z-30 bg-paper border-b border-rule">
     <div className="max-w-[1440px] mx-auto h-16 px-4 sm:px-6 lg:px-10 flex items-center justify-between gap-4">
-      <a href="/inicio/" className={`flex items-center gap-2 rounded-lg ${focusRing}`}>
-        <img src={logo} alt="" className="h-10 w-10" />
-        <span className="text-[21px] font-extrabold tracking-[-0.02em]">Wallex</span>
-      </a>
-      <nav aria-label="Landing" className="flex items-center gap-2 sm:gap-6">
-        <a href="#anatomia" className={`hidden sm:inline text-[13px] font-semibold text-ink-soft hover:text-ink rounded ${focusRing}`}>
-          Cómo funciona
+      <div className="flex items-center gap-10">
+        <a href="/inicio/" className={`flex items-center gap-2 rounded-lg ${focusRing}`}>
+          <img src={logo} alt="" className="h-10 w-10" />
+          <span className="text-[21px] font-extrabold tracking-[-0.02em]">Wallex</span>
+        </a>
+        <nav aria-label="Secciones de la página" className="hidden md:flex items-center gap-7">
+          <a href="#anatomia" className={`text-[15px] font-semibold text-ink-soft hover:text-ink rounded ${focusRing}`}>
+            Cómo funciona
+          </a>
+          <a href="#comparar" className={`text-[15px] font-semibold text-ink-soft hover:text-ink rounded ${focusRing}`}>
+            Comparar
+          </a>
+        </nav>
+      </div>
+      <div className="flex items-center gap-4 sm:gap-5">
+        <a
+          href="/?ingresar#buscar"
+          className={`flex items-center gap-2 text-[15px] font-semibold text-ink hover:text-ink-hover rounded ${focusRing}`}
+        >
+          <span aria-hidden="true" className="hidden sm:grid place-items-center size-8 rounded-full bg-rule/70">
+            <svg viewBox="0 0 16 16" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <circle cx="8" cy="5.5" r="2.75" />
+              <path d="M2.75 14c.6-2.6 2.7-4.25 5.25-4.25s4.65 1.65 5.25 4.25" strokeLinecap="round" />
+            </svg>
+          </span>
+          Ingresar
         </a>
         <a
-          href="/"
-          className={`bg-ink text-white text-[13px] font-semibold px-4 py-2 rounded-lg hover:bg-ink-hover transition-colors ${focusRing}`}
+          href="/#buscar"
+          className={`bg-ink text-white text-[13px] font-semibold px-3 sm:px-4 py-2 rounded-lg hover:bg-ink-hover transition-colors whitespace-nowrap ${focusRing}`}
         >
-          Abrir la app
+          Buscar arriendo
         </a>
-      </nav>
+      </div>
     </div>
   </header>
 );
@@ -69,7 +89,7 @@ const Header: React.FC = () => (
 const Hero: React.FC = () => (
   <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 pt-10 pb-16 lg:pt-14 lg:pb-24 grid gap-12 lg:grid-cols-[1fr_auto] lg:items-center">
     <div className="max-w-[640px]">
-      <h1 className="text-[2.75rem] leading-[1.02] lg:text-[4.5rem] lg:leading-[0.98] font-extrabold tracking-[-0.035em] text-balance">
+      <h1 className="text-[2.75rem] leading-[1.08] lg:text-[4.5rem] lg:leading-[1.08] font-extrabold tracking-[-0.035em] text-balance">
         Arrendar en Bogotá sin adivinar cuánto pagas ni de quién fiarte.
       </h1>
       <p className="mt-6 text-[17px] text-ink-soft max-w-[46ch]">
@@ -105,7 +125,7 @@ const AnatomyPinned: React.FC = () => {
     <section ref={ref} id="anatomia" className="relative h-[230vh] border-t border-rule bg-surface">
       <div className="sticky top-16 h-[calc(100vh-4rem)] max-w-[1440px] mx-auto px-10 grid grid-cols-[minmax(0,480px)_420px] justify-center gap-x-[160px] items-center">
         <div>
-          <h2 className="text-[3.25rem] leading-[1.02] font-extrabold tracking-[-0.03em] max-w-[14ch]">Una ficha, tres respuestas.</h2>
+          <h2 className="text-[3.25rem] leading-[1.08] font-extrabold tracking-[-0.03em] max-w-[14ch]">Una ficha, tres respuestas.</h2>
           <ol className="mt-12 space-y-8 max-w-[440px]">
             {STEPS.map((s, i) => (
               <li
@@ -169,7 +189,7 @@ const AnatomyStep: React.FC<{ index: number; still: boolean }> = ({ index, still
 const AnatomyStacked: React.FC<{ still: boolean }> = ({ still }) => (
   <section id="anatomia" className="border-t border-rule bg-surface">
     <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-16 lg:py-24">
-      <h2 className="text-[2rem] lg:text-[3.25rem] leading-[1.02] font-extrabold tracking-[-0.03em]">Una ficha, tres respuestas.</h2>
+      <h2 className="text-[2rem] lg:text-[3.25rem] leading-[1.08] font-extrabold tracking-[-0.03em]">Una ficha, tres respuestas.</h2>
       <ol className="mt-10 grid gap-12 max-w-[520px] lg:max-w-none lg:grid-cols-3 lg:gap-8 lg:items-start">
         {STEPS.map((s, i) => (
           <AnatomyStep key={s.n} index={i} still={still} />
@@ -236,7 +256,7 @@ const CompareCard: React.FC<{ row: (typeof compareRows)[number]; grow: number; m
 
 const compareCopy = (
   <>
-    <h2 className="text-[2rem] lg:text-[3.25rem] leading-[1.02] font-extrabold tracking-[-0.03em] max-w-[16ch]">
+    <h2 className="text-[2rem] lg:text-[3.25rem] leading-[1.08] font-extrabold tracking-[-0.03em] max-w-[16ch]">
       Tres opciones, la misma regla.
     </h2>
     <p className="mt-4 text-[17px] text-ink-soft max-w-[52ch]">
@@ -313,7 +333,7 @@ const HowItWorks: React.FC<{ still: boolean }> = ({ still }) => {
   return (
     <section className="border-t border-rule bg-surface">
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-16 lg:py-24">
-        <h2 className="text-[2rem] lg:text-[3.25rem] leading-[1.02] font-extrabold tracking-[-0.03em]">Así funciona.</h2>
+        <h2 className="text-[2rem] lg:text-[3.25rem] leading-[1.08] font-extrabold tracking-[-0.03em]">Así funciona.</h2>
         <ol ref={ref} className="relative mt-10 lg:mt-14 grid gap-10 md:grid-cols-3 md:gap-8">
           <span
             aria-hidden="true"
@@ -338,7 +358,7 @@ const HowItWorks: React.FC<{ still: boolean }> = ({ still }) => {
   );
 };
 
-// Capturas reales: el portátil se acerca y el celular sube mientras la sección cruza la pantalla
+// Capturas reales en un portátil y un celular: el portátil se acerca y el celular sube al cruzar la pantalla
 const Screens: React.FC<{ still: boolean }> = ({ still }) => {
   const [ref, p] = useViewProgress<HTMLElement>();
   const near = still ? 1 : easeOut(segment(p, 0.05, 0.5));
@@ -347,24 +367,46 @@ const Screens: React.FC<{ still: boolean }> = ({ still }) => {
   return (
     <section ref={ref} className="border-t border-rule overflow-hidden">
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-16 lg:py-24">
-        <h2 className="text-[2rem] lg:text-[3.25rem] leading-[1.02] font-extrabold tracking-[-0.03em]">La app, tal como está hoy.</h2>
-        <figure className="mt-10 lg:mt-14">
-          <div className="relative lg:pr-24">
-            <div
-              className="hidden md:block border border-rule bg-surface rounded-[10px] p-2 origin-bottom"
-              style={{ transform: `scale(${0.9 + 0.1 * near})` }}
-            >
-              <img src={shotDesktop} alt="Catálogo de Wallex en escritorio, con filtros a la izquierda y tarjetas con el total del mes" className="w-full rounded-[8px] border border-rule" loading="lazy" width={1440} height={900} />
+        <h2 className="text-[2rem] lg:text-[3.25rem] leading-[1.08] font-extrabold tracking-[-0.03em] max-w-[20ch]">
+          En el computador o en el celular, la misma ficha.
+        </h2>
+        <div className="mt-12 lg:mt-16 relative md:pr-[200px] lg:pr-[240px] md:pb-10">
+          {/* Portátil: pantalla con marco oscuro y la base debajo */}
+          <figure className="hidden md:block origin-bottom" style={{ transform: `scale(${0.92 + 0.08 * near})` }}>
+            <div className="relative bg-night rounded-t-[18px] px-3 pt-5 pb-3 lg:px-4 lg:pt-6 lg:pb-4">
+              <span aria-hidden="true" className="absolute top-2 lg:top-2.5 left-1/2 -translate-x-1/2 size-1.5 rounded-full bg-white/25" />
+              <img
+                src={shotDesktop}
+                alt="Catálogo de Wallex en la web, con filtros a la izquierda y tarjetas con el total del mes"
+                className="block w-full rounded-[3px]"
+                loading="lazy"
+                width={1440}
+                height={900}
+              />
             </div>
-            <div
-              className="md:absolute md:right-0 md:bottom-[-2rem] mx-auto w-[240px] lg:w-[260px] border border-rule bg-surface rounded-[28px] p-2"
-              style={{ transform: `translateY(${(1 - rise) * 96}px)` }}
-            >
-              <img src={shotPhone} alt="Catálogo de Wallex en celular" className="w-full rounded-[20px] border border-rule" loading="lazy" width={390} height={844} />
+            <div aria-hidden="true" className="relative -mx-[3%] h-3.5 lg:h-4 bg-rule rounded-b-[14px] border-b border-control/50">
+              <span className="absolute left-1/2 top-0 -translate-x-1/2 w-[13%] h-1.5 rounded-b-md bg-control/35" />
             </div>
-          </div>
-          <figcaption className="mt-6 md:mt-14 text-[12.5px] text-ink-faint">Capturas reales del prototipo, con inmuebles de ejemplo.</figcaption>
-        </figure>
+            <figcaption className="mt-4 text-[13px] font-semibold text-ink-soft">En la web</figcaption>
+          </figure>
+
+          {/* Celular: marco redondeado con la isla de la cámara */}
+          <figure
+            className="md:absolute md:right-0 md:bottom-0 mx-auto w-[230px] lg:w-[260px]"
+            style={{ transform: `translateY(${(1 - rise) * 96}px)` }}
+          >
+            <div className="relative bg-night rounded-[40px] p-[9px]">
+              <div className="overflow-hidden rounded-[31px] bg-surface">
+                {/* Franja de la barra de estado, donde va la isla de la cámara */}
+                <div aria-hidden="true" className="relative h-[30px]">
+                  <span className="absolute top-[7px] left-1/2 -translate-x-1/2 w-[32%] h-[18px] rounded-full bg-night" />
+                </div>
+                <img src={shotPhone} alt="Catálogo de Wallex en el celular" className="block w-full" loading="lazy" width={390} height={844} />
+              </div>
+            </div>
+            <figcaption className="mt-4 text-[13px] font-semibold text-ink-soft text-center md:text-left">En el celular</figcaption>
+          </figure>
+        </div>
       </div>
     </section>
   );
@@ -373,7 +415,7 @@ const Screens: React.FC<{ still: boolean }> = ({ still }) => {
 const FinalCta: React.FC = () => (
   <section className="border-t border-rule bg-surface">
     <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-16 lg:py-24">
-      <h2 className="text-[2rem] lg:text-[3.25rem] leading-[1.02] font-extrabold tracking-[-0.03em] max-w-[18ch]">
+      <h2 className="text-[2rem] lg:text-[3.25rem] leading-[1.08] font-extrabold tracking-[-0.03em] max-w-[18ch]">
         Empieza por lo que puedes pagar.
       </h2>
       <div className="mt-8 max-w-[1000px]">
@@ -382,7 +424,7 @@ const FinalCta: React.FC = () => (
       <p className="mt-4 text-[13px] text-ink-soft">
         O{' '}
         <a href="/" className={`font-semibold text-ink underline underline-offset-4 rounded ${focusRing}`}>
-          abre la app sin filtros
+          mira todos los arriendos
         </a>
         .
       </p>

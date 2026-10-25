@@ -153,7 +153,7 @@ export const PropertyComparer: React.FC<PropertyComparerProps> = ({
               </button>
             )}
             <div className="min-w-0">
-              <h1 className="text-[2rem] lg:text-[2.375rem] font-extrabold tracking-[-0.03em] leading-none">Comparador lado a lado</h1>
+              <h1 className="text-[2rem] lg:text-[2.375rem] font-extrabold tracking-[-0.03em] leading-[1.08]">Comparador lado a lado</h1>
               <p className="text-sm text-ink-soft mt-2 hidden sm:block">Lo que pagarías cada mes: canon, administración y transporte estimado en Bogotá.</p>
             </div>
           </div>

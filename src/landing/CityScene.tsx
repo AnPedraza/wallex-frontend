@@ -1,22 +1,18 @@
 import React from 'react';
 import photoPhone from '../assets/landing/bogota-teusaquillo-celular.webp';
 import photoDesktop from '../assets/landing/bogota-teusaquillo-escritorio.webp';
-import { ZONES } from './data';
 import { easeInOut, easeOut, segment, useSmoothSceneProgress, useViewProgress } from './scroll';
 
 const ALT = 'Vista aérea de Teusaquillo, en Bogotá, con los cerros orientales al fondo';
 const CREDIT = 'Teusaquillo, Bogotá. Foto de Victor Rosario en Unsplash.';
 
-// "Chapinero, Teusaquillo y Cedritos": las zonas que hoy tiene el prototipo
-const zonesText = `${ZONES.slice(0, -1).join(', ')} y ${ZONES[ZONES.length - 1]}.`;
-
 const overlayCopy = (
   <>
-    <h2 className="text-[2.75rem] leading-[1.02] lg:text-[4.5rem] lg:leading-[0.98] font-extrabold tracking-[-0.035em] text-white text-balance">
-      {zonesText}
+    <h2 className="text-[2.75rem] leading-[1.08] lg:text-[4.5rem] lg:leading-[1.08] font-extrabold tracking-[-0.035em] text-white text-balance">
+      Toda Bogotá, con las cuentas claras.
     </h2>
     <p className="mt-4 text-[17px] text-white/90 max-w-[46ch]">
-      Las mismas cuentas claras en cada barrio: lo que pagas al mes y quién te arrienda.
+      Del norte al sur, cada arriendo te dice lo que pagas al mes, lo que te piden y quién te arrienda.
     </p>
   </>
 );
@@ -36,7 +32,7 @@ export const CityPinned: React.FC = () => {
       <div ref={stageRef} className="sticky top-16 h-[calc(100vh-4rem)] overflow-hidden">
         <div className="absolute inset-y-0 left-10 w-[min(560px,40%)] flex flex-col justify-center">
           <h2
-            className="text-[3.25rem] leading-[1.02] font-extrabold tracking-[-0.03em]"
+            className="text-[3.25rem] leading-[1.08] font-extrabold tracking-[-0.03em]"
             style={{ opacity: before, transform: `translateY(${-(1 - before) * 20}px)` }}
           >
             Es tu ciudad. Que buscar casa no sea un riesgo.
