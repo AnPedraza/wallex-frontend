@@ -27,6 +27,17 @@ const BIN_SIZE = 250_000;
 
 const num = (value: number) => value.toLocaleString('es-CO');
 
+// Filtros que llegan desde la landing (/?zona=...&max=...); si no sirven, se usan los de siempre
+const initialFilters = () => {
+  const params = new URLSearchParams(window.location.search);
+  const zone = params.get('zona');
+  const max = Number(params.get('max'));
+  return {
+    zone: zone && INITIAL_PROPERTIES.some((p) => p.zone === zone) ? zone : 'Todas',
+    maxTotal: max >= RANGE_MIN && max <= RANGE_MAX ? Math.round(max / RANGE_STEP) * RANGE_STEP : DEFAULT_MAX,
+  };
+};
+
 const sealStatus = (p: Property): SealStatus => (!p.verified ? 'unverified' : p.certified ? 'verified' : 'pending');
 
 const folioOf = (p: Property) => sampleFolio(p.id, p.title, p.zone);
@@ -72,8 +83,8 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
   transportProfileId,
   onTransportProfileChange,
 }) => {
-  const [zone, setZone] = useState('Todas');
-  const [maxTotal, setMaxTotal] = useState(DEFAULT_MAX);
+  const [zone, setZone] = useState(() => initialFilters().zone);
+  const [maxTotal, setMaxTotal] = useState(() => initialFilters().maxTotal);
   const [onlyVerified, setOnlyVerified] = useState(false);
   const [noGuarantor, setNoGuarantor] = useState(false);
   const [petsOk, setPetsOk] = useState(false);

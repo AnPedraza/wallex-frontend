@@ -29,6 +29,24 @@ typography:
     fontWeight: 800
     lineHeight: 1
     letterSpacing: "-0.03em"
+  landing-hero:
+    fontFamily: "Schibsted Grotesk, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "4.5rem"
+    fontWeight: 800
+    lineHeight: 0.98
+    letterSpacing: "-0.035em"
+  landing-hero-phone:
+    fontFamily: "Schibsted Grotesk, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "2.75rem"
+    fontWeight: 800
+    lineHeight: 1.02
+    letterSpacing: "-0.035em"
+  landing-section:
+    fontFamily: "Schibsted Grotesk, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "3.25rem"
+    fontWeight: 800
+    lineHeight: 1.02
+    letterSpacing: "-0.03em"
   wordmark:
     fontFamily: "Schibsted Grotesk, ui-sans-serif, system-ui, sans-serif"
     fontSize: "21px"
@@ -276,6 +294,16 @@ La regla que manda: la pantalla nunca afirma algo que el prototipo no hace.
 
 ### Comparar (toggle)
 Botón sobre la foto, arriba a la derecha. Lleva una casilla dibujada y el texto "Comparar". Activo, pasa a fondo tinta con "En comparador" y usa `aria-pressed`.
+
+### Landing (/inicio)
+Página aparte de la app, con su propia entrada en Vite (`inicio/index.html`, código en `src/landing/`). Usa la misma ficha, los mismos datos de ejemplo y los mismos tokens; no inventa cifras.
+
+- **Titulares de display:** 4.5rem en escritorio y 2.75rem en celular para el titular principal; 3.25rem y 2rem para los de sección. Siempre 800 y tracking negativo.
+- **Rótulos de plano:** cada número (1, 2, 3) va unido a su parte de la ficha por una línea de 1 px que se traza desde su origen (`.lead-grow`). En celular el número queda dentro de la ficha y la leyenda va debajo.
+- **Escenas fijas (desde 1024 px):** la ficha queda fija y el scroll avanza total, requisitos y sello; la parte activa queda en tinta y el resto al 30 %. El comparador llega apilado, se abre en fila y luego crecen las barras a la misma escala.
+- **En celular o con movimiento reducido** no hay escenas fijas: cada parte va sola y se revela al entrar (con movimiento reducido, ya completa y quieta).
+- **Una animación por escena,** distinta en cada una; nunca el mismo fundido para todas las secciones. Sin carruseles ni efectos que no expliquen algo del producto.
+- Las capturas de la app son reales y lo dicen en su pie.
 
 ## Do's and Don'ts
 
