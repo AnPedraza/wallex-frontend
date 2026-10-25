@@ -80,6 +80,12 @@ typography:
     fontSize: "12.5px"
     fontWeight: 400
     lineHeight: 1.375
+  microprint:
+    fontFamily: "Schibsted Grotesk, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "7px"
+    fontWeight: 600
+    lineHeight: 1
+    letterSpacing: "0.08em"
 rounded:
   track: "2px"
   check: "3px"
@@ -304,6 +310,10 @@ Página aparte de la app, con su propia entrada en Vite (`inicio/index.html`, c�
 - **En celular o con movimiento reducido** no hay escenas fijas: cada parte va sola y se revela al entrar (con movimiento reducido, ya completa y quieta).
 - **Una animación por escena,** distinta en cada una; nunca el mismo fundido para todas las secciones. Sin carruseles ni efectos que no expliquen algo del producto.
 - Las capturas de la app son reales y lo dicen en su pie.
+- **Del desorden a la ficha:** escena en tinta de noche. Mensajes de una búsqueda real de arriendo (basados en las entrevistas) flotan y, con el scroll, cada uno vuela a la parte de la ficha que lo responde; esa parte se enciende y el sello se imprime al final. En celular quedan como un chat revuelto y la ficha se enciende al entrar.
+- **Bogotá:** una sola escena con fotos reales de Teusaquillo con los cerros (Victor Rosario, Unsplash, con crédito): toma horizontal en escritorio y vertical del mismo lugar en celular. En escritorio empieza como tarjeta a la derecha y se abre a pantalla completa, con el texto sobre un velo de tinta desde abajo. Es el único color cálido de la página y viene de la ciudad, no de la interfaz.
+- **Inercia:** las escenas fijas siguen al scroll con un poco de inercia (`followScroll`, 16 % por cuadro) y los recorridos largos usan entrada y salida suaves, para que nada salte con cada giro de la rueda.
+- **Microtexto:** franjas de 7 px con palabras del producto, como la letra pequeña de un billete. Se deslizan con el scroll y son decorativas (`aria-hidden`). Máximo tres por página.
 
 ## Do's and Don'ts
 

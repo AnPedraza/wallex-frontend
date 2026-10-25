@@ -3,9 +3,12 @@ import logo from '../assets/wallex-logo.png';
 import shotDesktop from '../assets/landing/app-catalogo-escritorio.webp';
 import shotPhone from '../assets/landing/app-catalogo-celular.webp';
 import { Footer } from '../components/Footer';
+import { ChaosPinned, ChaosStacked } from './ChaosScene';
+import { CityPinned, CityStacked } from './CityScene';
 import { COMPARE, cop, num, totalOf, transportOf } from './data';
 import { FichaDemo, type FichaPart } from './FichaDemo';
 import { LandingSearch } from './LandingSearch';
+import { Microprint } from './Microprint';
 import {
   easeOut,
   segment,
@@ -99,7 +102,7 @@ const AnatomyPinned: React.FC = () => {
   const active = STEPS[step].part;
 
   return (
-    <section ref={ref} id="anatomia" className="relative h-[320vh] border-t border-rule bg-surface">
+    <section ref={ref} id="anatomia" className="relative h-[230vh] border-t border-rule bg-surface">
       <div className="sticky top-16 h-[calc(100vh-4rem)] max-w-[1440px] mx-auto px-10 grid grid-cols-[minmax(0,480px)_420px] justify-center gap-x-[160px] items-center">
         <div>
           <h2 className="text-[3.25rem] leading-[1.02] font-extrabold tracking-[-0.03em] max-w-[14ch]">Una ficha, tres respuestas.</h2>
@@ -249,7 +252,7 @@ const ComparePinned: React.FC = () => {
   const grow = segment(p, 0.4, 0.72);
 
   return (
-    <section ref={ref} id="comparar" className="relative h-[230vh] border-t border-rule">
+    <section ref={ref} id="comparar" className="relative h-[170vh] border-t border-rule">
       <div className="sticky top-16 h-[calc(100vh-4rem)] max-w-[1440px] mx-auto px-10 flex flex-col justify-center">
         {compareCopy}
         <div className="mt-12 grid grid-cols-3 gap-6">
@@ -397,10 +400,15 @@ export const Landing: React.FC = () => {
       <Header />
       <main>
         <Hero />
+        <Microprint tone="night" />
+        {pinned ? <ChaosPinned /> : <ChaosStacked still={still} />}
+        <Microprint tone="night" direction={-1} />
         {pinned ? <AnatomyPinned /> : <AnatomyStacked still={still} />}
         {pinned ? <ComparePinned /> : <CompareStacked still={still} />}
+        {pinned ? <CityPinned /> : <CityStacked still={still} />}
         <HowItWorks still={still} />
         <Screens still={still} />
+        <Microprint direction={-1} />
         <FinalCta />
       </main>
       <Footer

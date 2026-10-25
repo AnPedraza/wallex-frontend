@@ -1,0 +1,85 @@
+import React from 'react';
+import photoPhone from '../assets/landing/bogota-teusaquillo-celular.webp';
+import photoDesktop from '../assets/landing/bogota-teusaquillo-escritorio.webp';
+import { ZONES } from './data';
+import { easeInOut, easeOut, segment, useSmoothSceneProgress, useViewProgress } from './scroll';
+
+const ALT = 'Vista aérea de Teusaquillo, en Bogotá, con los cerros orientales al fondo';
+const CREDIT = 'Teusaquillo, Bogotá. Foto de Victor Rosario en Unsplash.';
+
+// "Chapinero, Teusaquillo y Cedritos": las zonas que hoy tiene el prototipo
+const zonesText = `${ZONES.slice(0, -1).join(', ')} y ${ZONES[ZONES.length - 1]}.`;
+
+const overlayCopy = (
+  <>
+    <h2 className="text-[2.75rem] leading-[1.02] lg:text-[4.5rem] lg:leading-[0.98] font-extrabold tracking-[-0.035em] text-white text-balance">
+      {zonesText}
+    </h2>
+    <p className="mt-4 text-[17px] text-white/90 max-w-[46ch]">
+      Las mismas cuentas claras en cada barrio: lo que pagas al mes y quién te arrienda.
+    </p>
+  </>
+);
+
+const veil = 'absolute inset-0 bg-linear-to-t from-night/85 via-night/25 to-transparent';
+
+// Escritorio: la foto empieza como una tarjeta a la derecha y se abre hasta llenar la pantalla
+export const CityPinned: React.FC = () => {
+  const [ref, stageRef, p] = useSmoothSceneProgress<HTMLElement, HTMLDivElement>();
+  const o = easeInOut(segment(p, 0.04, 0.55));
+  const k = 1 - o;
+  const before = 1 - easeInOut(segment(p, 0.12, 0.32));
+  const after = easeInOut(segment(p, 0.5, 0.7));
+
+  return (
+    <section ref={ref} className="relative h-[190vh]">
+      <div ref={stageRef} className="sticky top-16 h-[calc(100vh-4rem)] overflow-hidden">
+        <div className="absolute inset-y-0 left-10 w-[min(560px,40%)] flex flex-col justify-center">
+          <h2
+            className="text-[3.25rem] leading-[1.02] font-extrabold tracking-[-0.03em]"
+            style={{ opacity: before, transform: `translateY(${-(1 - before) * 20}px)` }}
+          >
+            Es tu ciudad. Que buscar casa no sea un riesgo.
+          </h2>
+        </div>
+        <div
+          className="absolute inset-0"
+          style={{ clipPath: `inset(${18 * k}% ${8 * k}% ${18 * k}% ${52 * k}% round ${10 * k}px)` }}
+        >
+          <img src={photoDesktop} alt={ALT} className="size-full object-cover" style={{ transform: `scale(${1.1 - 0.1 * o})` }} />
+          <div aria-hidden="true" className={veil} style={{ opacity: easeInOut(segment(p, 0.4, 0.6)) }} />
+        </div>
+        <div
+          className="absolute left-10 bottom-16 max-w-[820px]"
+          style={{ opacity: after, transform: `translateY(${(1 - after) * 24}px)` }}
+        >
+          {overlayCopy}
+        </div>
+        <p className="absolute right-10 bottom-6 text-[12.5px] text-white/85" style={{ opacity: after }}>
+          {CREDIT}
+        </p>
+      </div>
+    </section>
+  );
+};
+
+// Celular o movimiento reducido: a todo el ancho, con un acercamiento leve al cruzar la pantalla
+export const CityStacked: React.FC<{ still: boolean }> = ({ still }) => {
+  const [ref, p] = useViewProgress<HTMLElement>();
+  const zoom = still ? 1 : 1.12 - 0.12 * easeOut(segment(p, 0.1, 0.6));
+
+  return (
+    <section ref={ref}>
+      <div className="relative overflow-hidden h-[88svh] min-h-[520px] max-h-[900px]">
+        <picture>
+          {/* En celular va la toma vertical del mismo lugar; en pantallas anchas, la horizontal */}
+          <source media="(min-width: 768px)" srcSet={photoDesktop} />
+          <img src={photoPhone} alt={ALT} className="size-full object-cover" style={{ transform: `scale(${zoom})` }} loading="lazy" />
+        </picture>
+        <div aria-hidden="true" className={veil} />
+        <div className="absolute inset-x-0 bottom-0 px-4 sm:px-6 lg:px-10 pb-10">{overlayCopy}</div>
+      </div>
+      <p className="px-4 sm:px-6 lg:px-10 py-3 text-[12.5px] text-ink-faint">{CREDIT}</p>
+    </section>
+  );
+};

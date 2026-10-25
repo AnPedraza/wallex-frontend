@@ -80,6 +80,61 @@ export const segment = (p: number, from: number, to: number) => Math.min(1, Math
 // Curva de salida exponencial, la misma de las animaciones del sistema
 export const easeOut = (t: number) => (t >= 1 ? 1 : 1 - Math.pow(2, -10 * t));
 
+// Entrada y salida suaves, para recorridos largos que no deben arrancar ni frenar de golpe
+export const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+
+// Avance de 0 a 1 de una escena fija (sección alta con un escenario pegado arriba).
+// stickyTop es la altura a la que se pega la escena (la barra mide 64 px).
+export function sceneProgress(section: HTMLElement, stage: HTMLElement, stickyTop: number) {
+  const rect = section.getBoundingClientRect();
+  const travel = rect.height - stage.offsetHeight;
+  return travel > 0 ? Math.min(1, Math.max(0, (stickyTop - rect.top) / travel)) : 0;
+}
+
+// Sigue al scroll con un poco de inercia, para que la escena no salte con cada giro de la rueda:
+// en cada cuadro acerca el valor un 16 % a su objetivo y se detiene al llegar
+export function followScroll(target: () => number, render: (value: number) => void) {
+  let current = target();
+  let frame = 0;
+  const tick = () => {
+    frame = 0;
+    const goal = target();
+    current += (goal - current) * 0.16;
+    if (Math.abs(goal - current) < 0.0004) current = goal;
+    else frame = requestAnimationFrame(tick);
+    render(current);
+  };
+  const schedule = () => {
+    if (!frame) frame = requestAnimationFrame(tick);
+  };
+  render(current);
+  window.addEventListener('scroll', schedule, { passive: true });
+  window.addEventListener('resize', schedule);
+  return () => {
+    cancelAnimationFrame(frame);
+    window.removeEventListener('scroll', schedule);
+    window.removeEventListener('resize', schedule);
+  };
+}
+
+// Versión con estado de lo anterior, para escenas que se pintan con React
+export function useSmoothSceneProgress<T extends HTMLElement, S extends HTMLElement>(stickyTop = 64) {
+  const ref = useRef<T>(null);
+  const stageRef = useRef<S>(null);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(
+    () =>
+      followScroll(
+        () => (ref.current && stageRef.current ? sceneProgress(ref.current, stageRef.current, stickyTop) : 0),
+        setProgress
+      ),
+    [stickyTop]
+  );
+
+  return [ref, stageRef, progress] as const;
+}
+
 // Avance de 0 a 1 mientras la sección cruza la pantalla, de que asoma abajo a que sale arriba
 export function useViewProgress<T extends HTMLElement>() {
   const ref = useRef<T>(null);
