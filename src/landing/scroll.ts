@@ -18,6 +18,14 @@ export function useMediaQuery(query: string): boolean {
 
 export const useReducedMotion = () => useMediaQuery('(prefers-reduced-motion: reduce)');
 
+type NavigatorWithData = Navigator & { connection?: { saveData?: boolean } };
+
+// Los videos corren solos si no hay movimiento reducido ni ahorro de datos
+export const useAutoplayAllowed = () => {
+  const still = useReducedMotion();
+  return !still && !(navigator as NavigatorWithData).connection?.saveData;
+};
+
 // Avance de 0 a 1 mientras la sección recorre la pantalla (para escenas fijas con position: sticky)
 export function useScrollProgress<T extends HTMLElement>() {
   const ref = useRef<T>(null);
@@ -166,22 +174,23 @@ export function useViewProgress<T extends HTMLElement>() {
   return [ref, progress] as const;
 }
 
-// Avance de 0 a 1 en el tiempo, una sola vez, desde que run pasa a true (cuentas en celular)
-export function useTimedProgress(run: boolean, duration = 1200) {
+// Avance de 0 a 1 en el tiempo, una sola vez, desde que run pasa a true (cuentas en celular).
+// delay deja que la cuenta empiece cuando la escena ya está armada.
+export function useTimedProgress(run: boolean, duration = 1200, delay = 0) {
   const [t, setT] = useState(0);
 
   useEffect(() => {
     if (!run) return;
     let frame = 0;
-    const start = performance.now();
+    const start = performance.now() + delay;
     const tick = (now: number) => {
-      const value = Math.min(1, (now - start) / duration);
+      const value = Math.min(1, Math.max(0, (now - start) / duration));
       setT(value);
       if (value < 1) frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [run, duration]);
+  }, [run, duration, delay]);
 
   return t;
 }

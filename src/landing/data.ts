@@ -33,3 +33,6 @@ export const appLink = (zone: string, max: number) => {
 
 export const cop = (v: number) => `$ ${v.toLocaleString('es-CO')}`;
 export const num = (v: number) => v.toLocaleString('es-CO');
+
+// Enlace a la ficha de un inmueble en la app: el catálogo la abre al cargar
+export const fichaLink = (id: string) => `/?${new URLSearchParams({ desde: 'landing', ficha: id }).toString()}#buscar`;

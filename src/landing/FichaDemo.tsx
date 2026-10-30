@@ -14,10 +14,24 @@ interface FichaDemoProps {
   leader?: boolean; // línea de referencia desde la parte activa hacia la izquierda
   marks?: readonly string[]; // rótulos numerados junto a cada parte, como en un plano
   only?: FichaPart; // muestra solo esa parte (recorte para celular)
+  href?: string; // si llega, la ficha entera abre ese inmueble en la app
+  entrance?: boolean; // secuencia de entrada del inicio: la hoja sube, la foto se abre y los rótulos llegan al final
 }
 
+const delay = (ms: number) => ({ ['--delay' as string]: `${ms}ms` }) as React.CSSProperties;
+
 // La ficha real de un inmueble del prototipo, con las mismas partes y el mismo orden que en la app
-export const FichaDemo: React.FC<FichaDemoProps> = ({ active = null, totalProgress = 1, reqProgress = 1, sealKey = 0, leader = false, marks, only }) => {
+export const FichaDemo: React.FC<FichaDemoProps> = ({
+  active = null,
+  totalProgress = 1,
+  reqProgress = 1,
+  sealKey = 0,
+  leader = false,
+  marks,
+  only,
+  href,
+  entrance = false,
+}) => {
   const p = DEMO;
   const total = totalOf(p);
   const transport = transportOf(p);
@@ -52,24 +66,38 @@ export const FichaDemo: React.FC<FichaDemoProps> = ({ active = null, totalProgre
   const markFor = (n: number) =>
     marks ? (
       <span aria-hidden="true" className="absolute top-4 right-4 lg:right-auto lg:left-full flex items-center">
-        <span className="lead-grow hidden lg:block h-px w-10 bg-ink origin-left" style={{ animationDelay: `${300 + n * 180}ms` }} />
-        <span className="grid place-items-center size-6 rounded-full border border-ink bg-surface text-[12.5px] font-bold">{n}</span>
-        <span className="hidden lg:block ml-2 text-[13px] font-semibold whitespace-nowrap">{marks[n - 1]}</span>
+        <span className="lead-grow hidden lg:block h-px w-10 bg-ink origin-left" style={{ animationDelay: `${(entrance ? 1050 : 300) + n * 170}ms` }} />
+        <span
+          className={`grid place-items-center size-6 rounded-full border border-ink bg-surface text-[12.5px] font-bold ${entrance ? 'enter-pop' : ''}`}
+          style={delay(1050 + n * 170 + 200)}
+        >
+          {n}
+        </span>
+        <span className={`hidden lg:block ml-2 text-[13px] font-semibold whitespace-nowrap ${entrance ? 'enter-up' : ''}`} style={delay(1050 + n * 170 + 260)}>
+          {marks[n - 1]}
+        </span>
       </span>
     ) : null;
 
   const show = (part: FichaPart) => !only || only === part;
   const ruled = only ? '' : 'border-t border-rule';
 
-  return (
+  const sheet = (
     <article
-      className="bg-surface border border-rule rounded-[10px] w-full max-w-[420px]"
-      aria-label={only ? undefined : `Ficha de ejemplo: ${p.title}`}
+      className={`bg-surface border rounded-[10px] w-full max-w-[420px] transition-colors duration-300 ${
+        href ? 'border-rule group-hover:border-ink group-focus-visible:border-ink' : 'border-rule'
+      } ${entrance ? 'enter-up' : ''}`}
+      style={entrance ? delay(180) : undefined}
+      aria-label={only || href ? undefined : `Ficha de ejemplo: ${p.title}`}
     >
       {!only && (
         <>
-          <div className="aspect-[16/10] overflow-hidden rounded-t-[10px] bg-rule">
-            <img src={p.image} alt="" className="size-full object-cover" />
+          <div className={`aspect-[16/10] overflow-hidden rounded-t-[10px] bg-rule ${entrance ? 'enter-photo' : ''}`} style={entrance ? delay(320) : undefined}>
+            <img
+              src={p.image}
+              alt=""
+              className={`size-full object-cover ${href ? 'transition-transform duration-[900ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.04]' : ''}`}
+            />
           </div>
           <div className="px-5 pt-4">
             <h3 className="text-[17px] font-bold tracking-[-0.01em]">{p.title}</h3>
@@ -129,6 +157,23 @@ export const FichaDemo: React.FC<FichaDemoProps> = ({ active = null, totalProgre
         <VerificationStamp key={sealKey} seed={p.id} status="verified" folio={sampleFolio(p.id, p.title, p.zone)} />
       </div>
       )}
+
+      {href && (
+        <p className="px-5 py-3 border-t border-rule text-[13px] font-semibold">
+          <span className="link-grow">Abrir esta ficha en la app</span>
+        </p>
+      )}
     </article>
+  );
+
+  if (!href) return sheet;
+  return (
+    <a
+      href={href}
+      className="ficha-link group block w-full max-w-[420px] rounded-[10px] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
+      aria-label={`Abrir en la app la ficha de ${p.title}`}
+    >
+      {sheet}
+    </a>
   );
 };

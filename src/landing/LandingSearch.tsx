@@ -30,7 +30,7 @@ export const LandingSearch: React.FC<LandingSearchProps> = ({ compact = false })
           id={`${ids}-zona`}
           value={zone}
           onChange={(e) => setZone(e.target.value)}
-          className="w-full bg-surface border border-control rounded-lg px-3 py-2.5 text-sm"
+          className="w-full bg-surface border border-control rounded-lg px-3 py-2.5 text-sm transition-colors duration-150 hover:border-ink"
         >
           <option value="Todas">Todas las zonas</option>
           {ZONES.map((z) => (
@@ -63,7 +63,7 @@ export const LandingSearch: React.FC<LandingSearchProps> = ({ compact = false })
       <button
         type="submit"
         disabled={count === 0}
-        className={`${compact ? '' : 'sm:col-span-2'} bg-ink text-white font-semibold text-[15px] px-6 py-3 rounded-lg hover:bg-ink-hover disabled:opacity-45 disabled:cursor-not-allowed transition-colors`}
+        className={`${compact ? '' : 'sm:col-span-2'} bg-ink text-white font-semibold text-[15px] px-6 py-3 rounded-lg hover:bg-ink-hover active:scale-[0.98] disabled:opacity-45 disabled:cursor-not-allowed disabled:active:scale-100 transition-[background-color,transform] duration-150`}
       >
         {count === 0 ? 'Sube el tope para ver arriendos' : `Ver ${count} ${count === 1 ? 'arriendo' : 'arriendos'}`}
       </button>

@@ -218,7 +218,7 @@ export const ChaosPinned: React.FC = () => {
   };
 
   return (
-    <section ref={sectionRef} className="relative h-[240vh] bg-night">
+    <section ref={sectionRef} data-header="night" className="relative h-[240vh] bg-night">
       <div ref={stageRef} className="sticky top-16 h-[calc(100vh-4rem)] overflow-hidden max-w-[1440px] mx-auto">
         <div className="absolute left-10 top-[9%] max-w-[480px] z-10">
           <div ref={aRef}>{copyA}</div>
@@ -255,7 +255,7 @@ export const ChaosStacked: React.FC<{ still: boolean }> = ({ still }) => {
   const on = still || seen;
 
   return (
-    <section className="bg-night">
+    <section data-header="night" className="bg-night">
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-16 lg:py-24 grid gap-16 lg:grid-cols-2 lg:items-start">
         <div>
           {copyA}

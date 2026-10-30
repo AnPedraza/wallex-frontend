@@ -50,7 +50,11 @@ export const Microprint: React.FC<MicroprintProps> = ({ tone = 'paper', directio
   const toneClass = tone === 'night' ? 'bg-night text-night-faint border-white/10' : 'bg-paper text-ink-faint border-rule';
 
   return (
-    <div aria-hidden="true" className={`overflow-hidden border-y py-[3px] select-none ${toneClass}`}>
+    <div
+      aria-hidden="true"
+      data-header={tone === 'night' ? 'night' : undefined}
+      className={`overflow-hidden border-y py-[3px] select-none ${toneClass}`}
+    >
       <div ref={ref} className="flex w-max whitespace-nowrap will-change-transform">
         {Array.from({ length: REPEAT }, (_, i) => (
           <span key={i} className="flex text-[7px] font-semibold tracking-[0.08em]">

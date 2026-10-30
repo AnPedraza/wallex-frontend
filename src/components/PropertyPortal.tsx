@@ -38,6 +38,16 @@ const initialFilters = () => {
   };
 };
 
+// Ficha que llega abierta desde la landing (/?ficha=5); al cerrarla se quita de la dirección
+const fichaFromUrl = () => INITIAL_PROPERTIES.find((p) => p.id === new URLSearchParams(window.location.search).get('ficha')) ?? null;
+
+const clearFichaFromUrl = () => {
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has('ficha')) return;
+  url.searchParams.delete('ficha');
+  window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+};
+
 const sealStatus = (p: Property): SealStatus => (!p.verified ? 'unverified' : p.certified ? 'verified' : 'pending');
 
 const folioOf = (p: Property) => sampleFolio(p.id, p.title, p.zone);
@@ -95,7 +105,20 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [showKycModal, setShowKycModal] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
-  const [detail, setDetail] = useState<{ property: DetailProperty; transport: number; folio: string | null } | null>(null);
+  const [detail, setDetail] = useState<{ property: DetailProperty; transport: number; folio: string | null } | null>(() => {
+    const property = fichaFromUrl();
+    if (!property) return null;
+    const startMultiplier = TRANSPORT_PROFILES.find((t) => t.id === (transportProfileId ?? 'standard'))?.multiplier ?? 1;
+    return {
+      property: toDetail(property),
+      transport: Math.round(property.estimatedTransportMonthly * startMultiplier),
+      folio: property.verified ? folioOf(property) : null,
+    };
+  });
+  const closeDetail = () => {
+    setDetail(null);
+    clearFichaFromUrl();
+  };
   const [overFooter, setOverFooter] = useState(false);
 
   // La barra del comparador se invierte cuando pasa sobre el pie de página (mismo color tinta)
@@ -165,7 +188,7 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
   };
 
   const handleContactFromDetail = (property: DetailProperty) => {
-    setDetail(null);
+    closeDetail();
     const matched = INITIAL_PROPERTIES.find((p) => p.id === property.id);
     if (matched) handleContact(matched);
   };
@@ -481,7 +504,7 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
           property={detail.property}
           transport={{ amount: detail.transport, label: TRANSPORT_LABELS[transportId] ?? 'Transporte estimado' }}
           folio={detail.folio}
-          onClose={() => setDetail(null)}
+          onClose={closeDetail}
           onContact={handleContactFromDetail}
         />
       )}

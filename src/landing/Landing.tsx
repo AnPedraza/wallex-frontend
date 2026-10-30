@@ -1,17 +1,21 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import logo from '../assets/wallex-logo.png';
-import shotDesktop from '../assets/landing/app-catalogo-escritorio.webp';
-import shotPhone from '../assets/landing/app-catalogo-celular.webp';
+import clipPhone from '../assets/landing/app-recorrido-celular.mp4';
+import posterPhone from '../assets/landing/app-recorrido-celular.webp';
+import clipDesktop from '../assets/landing/app-recorrido-escritorio.mp4';
+import posterDesktop from '../assets/landing/app-recorrido-escritorio.webp';
 import { Footer } from '../components/Footer';
 import { ChaosPinned, ChaosStacked } from './ChaosScene';
 import { CityPinned, CityStacked } from './CityScene';
-import { COMPARE, cop, num, totalOf, transportOf } from './data';
+import { COMPARE, DEMO, cop, fichaLink, num, totalOf, transportOf } from './data';
 import { FichaDemo, type FichaPart } from './FichaDemo';
 import { LandingSearch } from './LandingSearch';
+import { LoopVideo, VideoToggleIcon, type VideoChoice } from './LoopVideo';
 import { Microprint } from './Microprint';
 import {
   easeOut,
   segment,
+  useAutoplayAllowed,
   useInView,
   useMediaQuery,
   useReducedMotion,
@@ -43,77 +47,167 @@ const STEPS: { part: FichaPart; n: number; title: string; body: string }[] = [
   },
 ];
 
+type HeaderTone = 'paper' | 'night' | 'clear';
+
+const TONES: Record<HeaderTone, { bar: string; soft: string; bubble: string; cta: string; ring: string }> = {
+  paper: {
+    bar: 'bg-paper border-rule text-ink',
+    soft: 'text-ink-soft hover:text-ink',
+    bubble: 'bg-rule/70',
+    cta: 'bg-ink text-white hover:bg-ink-hover',
+    ring: 'focus-visible:outline-ink',
+  },
+  night: {
+    bar: 'bg-night border-white/10 text-white',
+    soft: 'text-night-text hover:text-white',
+    bubble: 'bg-white/10',
+    cta: 'bg-white text-ink hover:bg-paper',
+    ring: 'focus-visible:outline-white',
+  },
+  clear: {
+    bar: 'bg-night/60 border-transparent text-white',
+    soft: 'text-white/85 hover:text-white',
+    bubble: 'bg-white/15',
+    cta: 'bg-white text-ink hover:bg-paper',
+    ring: 'focus-visible:outline-white',
+  },
+};
+
+// La barra toma el tono de lo que pasa por debajo: papel, la escena de noche o la foto abierta.
+// Las secciones lo declaran con data-header; se revisa al hacer scroll y unos cuadros más, por la inercia de las escenas.
+const useHeaderTone = () => {
+  const [tone, setTone] = useState<HeaderTone>('paper');
+
+  useEffect(() => {
+    let frame = 0;
+    let until = 0;
+    const read = () => {
+      const header = document.querySelector('[data-landing-header]');
+      const y = (header?.getBoundingClientRect().bottom ?? 64) - 2;
+      const below = document.elementsFromPoint(window.innerWidth / 2, y).find((el) => !el.closest('[data-landing-header]'));
+      const value = below?.closest<HTMLElement>('[data-header]')?.dataset.header;
+      setTone(value === 'night' || value === 'clear' ? value : 'paper');
+    };
+    const loop = (now: number) => {
+      read();
+      frame = now < until ? requestAnimationFrame(loop) : 0;
+    };
+    const schedule = () => {
+      until = performance.now() + 700;
+      if (!frame) frame = requestAnimationFrame(loop);
+    };
+    schedule();
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', schedule);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('scroll', schedule);
+      window.removeEventListener('resize', schedule);
+    };
+  }, []);
+
+  return tone;
+};
+
+const press = 'transition-[background-color,color,transform] duration-150 active:scale-[0.97]';
+
 // Barra superior propia de la landing: a la izquierda la marca y las secciones de esta página,
 // a la derecha la cuenta y la búsqueda
-const Header: React.FC = () => (
-  <header className="sticky top-0 z-30 bg-paper border-b border-rule">
-    <div className="max-w-[1440px] mx-auto h-16 px-4 sm:px-6 lg:px-10 flex items-center justify-between gap-4">
-      <div className="flex items-center gap-10">
-        <a href="/inicio/" className={`flex items-center gap-2 rounded-lg ${focusRing}`}>
-          <img src={logo} alt="" className="h-10 w-10" />
-          <span className="text-[21px] font-extrabold tracking-[-0.02em]">Wallex</span>
-        </a>
-        <nav aria-label="Secciones de la página" className="hidden md:flex items-center gap-7">
-          <a href="#anatomia" className={`text-[15px] font-semibold text-ink-soft hover:text-ink rounded ${focusRing}`}>
-            Cómo funciona
-          </a>
-          <a href="#comparar" className={`text-[15px] font-semibold text-ink-soft hover:text-ink rounded ${focusRing}`}>
-            Comparar
-          </a>
-        </nav>
-      </div>
-      <div className="flex items-center gap-4 sm:gap-5">
-        <a
-          href="/?ingresar#buscar"
-          className={`flex items-center gap-2 text-[15px] font-semibold text-ink hover:text-ink-hover rounded ${focusRing}`}
-        >
-          <span aria-hidden="true" className="hidden sm:grid place-items-center size-8 rounded-full bg-rule/70">
-            <svg viewBox="0 0 16 16" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <circle cx="8" cy="5.5" r="2.75" />
-              <path d="M2.75 14c.6-2.6 2.7-4.25 5.25-4.25s4.65 1.65 5.25 4.25" strokeLinecap="round" />
-            </svg>
-          </span>
-          Ingresar
-        </a>
-        <a
-          href="/#buscar"
-          className={`bg-ink text-white text-[13px] font-semibold px-3 sm:px-4 py-2 rounded-lg hover:bg-ink-hover transition-colors whitespace-nowrap ${focusRing}`}
-        >
-          Buscar arriendo
-        </a>
-      </div>
-    </div>
-  </header>
-);
+const Header: React.FC = () => {
+  const t = TONES[useHeaderTone()];
+  const ring = `focus-visible:outline-2 focus-visible:outline-offset-2 ${t.ring}`;
 
-const Hero: React.FC = () => (
-  <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 pt-10 pb-16 lg:pt-14 lg:pb-24 grid gap-12 lg:grid-cols-[1fr_auto] lg:items-center">
-    <div className="max-w-[640px]">
-      <h1 className="text-[2.75rem] leading-[1.08] lg:text-[4.5rem] lg:leading-[1.08] font-extrabold tracking-[-0.035em] text-balance">
-        Arrendar en Bogotá sin adivinar cuánto pagas ni de quién fiarte.
-      </h1>
-      <p className="mt-6 text-[17px] text-ink-soft max-w-[46ch]">
-        Cada arriendo con la misma ficha: el total del mes, lo que te piden y quién publica, en el mismo orden.
-      </p>
-      <div className="mt-8">
-        <LandingSearch />
+  return (
+    <header
+      data-landing-header
+      className={`sticky top-0 z-30 border-b transition-[background-color,border-color,color] duration-300 ${t.bar}`}
+    >
+      <div className="max-w-[1440px] mx-auto h-16 px-4 sm:px-6 lg:px-10 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-10">
+          <a href="/inicio/" className={`flex items-center gap-2 rounded-lg ${ring}`}>
+            <img src={logo} alt="" className="h-10 w-10" />
+            <span className="text-[21px] font-extrabold tracking-[-0.02em]">Wallex</span>
+          </a>
+          <nav aria-label="Secciones de la página" className="hidden md:flex items-center gap-7">
+            <a href="#anatomia" className={`link-grow text-[15px] font-semibold transition-colors duration-300 ${t.soft} ${ring}`}>
+              Cómo funciona
+            </a>
+            <a href="#comparar" className={`link-grow text-[15px] font-semibold transition-colors duration-300 ${t.soft} ${ring}`}>
+              Comparar
+            </a>
+          </nav>
+        </div>
+        <div className="flex items-center gap-4 sm:gap-5">
+          <a href="/?ingresar#buscar" className={`flex items-center gap-2 text-[15px] font-semibold rounded ${ring}`}>
+            <span
+              aria-hidden="true"
+              className={`hidden sm:grid place-items-center size-8 rounded-full transition-colors duration-300 ${t.bubble}`}
+            >
+              <svg viewBox="0 0 16 16" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <circle cx="8" cy="5.5" r="2.75" />
+                <path d="M2.75 14c.6-2.6 2.7-4.25 5.25-4.25s4.65 1.65 5.25 4.25" strokeLinecap="round" />
+              </svg>
+            </span>
+            <span className="link-grow">Ingresar</span>
+          </a>
+          <a href="/#buscar" className={`text-[13px] font-semibold px-3 sm:px-4 py-2 rounded-lg whitespace-nowrap ${press} ${t.cta} ${ring}`}>
+            Buscar arriendo
+          </a>
+        </div>
       </div>
-      <p className="mt-3 text-[12.5px] text-ink-faint">Prototipo académico: inmuebles de ejemplo y verificación simulada.</p>
-    </div>
+    </header>
+  );
+};
 
-    <div className="lg:pr-40">
-      <FichaDemo marks={STEPS.map((s) => s.title)} />
-      <ol className="lg:hidden mt-4 grid gap-1.5 text-[13px] max-w-[420px]">
-        {STEPS.map((s) => (
-          <li key={s.n} className="flex gap-2">
-            <span className="font-bold w-4">{s.n}</span>
-            <span className="text-ink-soft">{s.title}</span>
-          </li>
-        ))}
-      </ol>
-    </div>
-  </section>
-);
+const HEADLINE = 'Arrendar en Bogotá sin adivinar cuánto pagas ni de quién fiarte.';
+const enter = (ms: number) => ({ ['--delay' as string]: `${ms}ms` }) as React.CSSProperties;
+
+// La entrada del inicio es la única secuencia al cargar: el titular sube palabra por palabra,
+// después el buscador y la ficha, que se arma, suma su total y al final recibe sus rótulos.
+const Hero: React.FC<{ still: boolean }> = ({ still }) => {
+  const count = useTimedProgress(!still, 1100, 700);
+
+  return (
+    <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 pt-10 pb-16 lg:pt-14 lg:pb-24 grid gap-12 lg:grid-cols-[1fr_auto] lg:items-center">
+      <div className="max-w-[640px]">
+        <h1
+          className="text-[2.75rem] leading-[1.08] lg:text-[4.5rem] lg:leading-[1.08] font-extrabold tracking-[-0.035em] text-balance"
+          aria-label={HEADLINE}
+        >
+          {HEADLINE.split(' ').map((word, i) => (
+            <React.Fragment key={i}>
+              {i > 0 && ' '}
+              <span className="enter-word" aria-hidden="true">
+                <span style={enter(60 + i * 38)}>{word}</span>
+              </span>
+            </React.Fragment>
+          ))}
+        </h1>
+        <p className="enter-up mt-6 text-[17px] text-ink-soft max-w-[46ch]" style={enter(420)}>
+          Cada arriendo con la misma ficha: el total del mes, lo que te piden y quién publica, en el mismo orden.
+        </p>
+        <div className="enter-up mt-8" style={enter(540)}>
+          <LandingSearch />
+        </div>
+        <p className="enter-up mt-3 text-[12.5px] text-ink-faint text-pretty" style={enter(680)}>
+          Prototipo académico: inmuebles de ejemplo y verificación simulada.
+        </p>
+      </div>
+
+      <div className="lg:pr-40">
+        <FichaDemo marks={STEPS.map((s) => s.title)} entrance totalProgress={still ? 1 : count} href={fichaLink(DEMO.id)} />
+        <ol className="lg:hidden mt-4 grid gap-1.5 text-[13px] max-w-[420px]">
+          {STEPS.map((s) => (
+            <li key={s.n} className="flex gap-2">
+              <span className="font-bold w-4">{s.n}</span>
+              <span className="text-ink-soft">{s.title}</span>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+  );
+};
 
 // Escritorio: la ficha queda fija y el scroll recorre sus tres partes
 const AnatomyPinned: React.FC = () => {
@@ -216,10 +310,15 @@ const CompareCard: React.FC<{ row: (typeof compareRows)[number]; grow: number; m
     { label: 'Transporte', value: transport, className: 'bg-control' },
   ];
   return (
-    <article
-      className={`bg-surface border rounded-[10px] p-5 transition-colors duration-500 ${marked ? 'border-ink' : 'border-rule'}`}
+    <a
+      href={fichaLink(p.id)}
+      className={`ficha-link group block bg-surface border rounded-[10px] p-5 transition-colors duration-300 hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink ${
+        marked ? 'border-ink' : 'border-rule'
+      }`}
     >
-      <h3 className="text-[17px] font-bold tracking-[-0.01em]">{p.title}</h3>
+      <h3 className="text-[17px] font-bold tracking-[-0.01em]">
+        <span className="link-grow">{p.title}</span>
+      </h3>
       <p className="text-[13px] text-ink-soft mt-0.5">
         {p.zone} · {p.area} m²
       </p>
@@ -250,7 +349,7 @@ const CompareCard: React.FC<{ row: (typeof compareRows)[number]; grow: number; m
       <p className={`mt-4 text-[13px] font-semibold transition-opacity duration-500 ${marked ? 'opacity-100' : 'opacity-0'}`}>
         La de menor total del mes
       </p>
-    </article>
+    </a>
   );
 };
 
@@ -288,7 +387,7 @@ const ComparePinned: React.FC = () => {
             </div>
           ))}
         </div>
-        <a href="/#comparar" className={`mt-8 self-start text-[15px] font-semibold underline underline-offset-4 hover:text-ink-hover rounded ${focusRing}`}>
+        <a href="/#comparar" className={`link-line mt-8 self-start text-[15px] font-semibold rounded ${focusRing}`}>
           Abrir el comparador
         </a>
       </div>
@@ -309,7 +408,7 @@ const CompareStacked: React.FC<{ still: boolean }> = ({ still }) => {
           <CompareCard key={row.p.id} row={row} grow={grow} marked={grow >= 1 && row === cheapest} />
         ))}
       </div>
-      <a href="/#comparar" className={`inline-block mt-6 text-[15px] font-semibold underline underline-offset-4 rounded ${focusRing}`}>
+      <a href="/#comparar" className={`link-line inline-block mt-6 text-[15px] font-semibold rounded ${focusRing}`}>
         Abrir el comparador
       </a>
     </section>
@@ -358,9 +457,13 @@ const HowItWorks: React.FC<{ still: boolean }> = ({ still }) => {
   );
 };
 
-// Capturas reales en un portátil y un celular: el portátil se acerca y el celular sube al cruzar la pantalla
+// Recorridos grabados de la app real en un portátil y un celular: el portátil se acerca y el celular sube al cruzar la pantalla
 const Screens: React.FC<{ still: boolean }> = ({ still }) => {
   const [ref, p] = useViewProgress<HTMLElement>();
+  // Un solo control para los dos recorridos, fuera de las pantallas para no confundirlo con la app
+  const [choice, setChoice] = useState<VideoChoice>('auto');
+  const allowed = useAutoplayAllowed();
+  const running = choice === 'play' || (choice === 'auto' && allowed);
   const near = still ? 1 : easeOut(segment(p, 0.05, 0.5));
   const rise = still ? 1 : easeOut(segment(p, 0.15, 0.6));
 
@@ -375,13 +478,14 @@ const Screens: React.FC<{ still: boolean }> = ({ still }) => {
           <figure className="hidden md:block origin-bottom" style={{ transform: `scale(${0.92 + 0.08 * near})` }}>
             <div className="relative bg-night rounded-t-[18px] px-3 pt-5 pb-3 lg:px-4 lg:pt-6 lg:pb-4">
               <span aria-hidden="true" className="absolute top-2 lg:top-2.5 left-1/2 -translate-x-1/2 size-1.5 rounded-full bg-white/25" />
-              <img
-                src={shotDesktop}
-                alt="Catálogo de Wallex en la web, con filtros a la izquierda y tarjetas con el total del mes"
-                className="block w-full rounded-[3px]"
-                loading="lazy"
-                width={1440}
-                height={900}
+              <LoopVideo
+                src={clipDesktop}
+                poster={posterDesktop}
+                width={1280}
+                height={800}
+                className="rounded-[3px]"
+                choice={choice}
+                label="Recorrido por Wallex en la web: filtrar por zona y total del mes, abrir una ficha y comparar opciones"
               />
             </div>
             <div aria-hidden="true" className="relative -mx-[3%] h-3.5 lg:h-4 bg-rule rounded-b-[14px] border-b border-control/50">
@@ -401,10 +505,29 @@ const Screens: React.FC<{ still: boolean }> = ({ still }) => {
                 <div aria-hidden="true" className="relative h-[30px]">
                   <span className="absolute top-[7px] left-1/2 -translate-x-1/2 w-[32%] h-[18px] rounded-full bg-night" />
                 </div>
-                <img src={shotPhone} alt="Catálogo de Wallex en el celular" className="block w-full" loading="lazy" width={390} height={844} />
+                <LoopVideo
+                  src={clipPhone}
+                  poster={posterPhone}
+                  width={520}
+                  height={1126}
+                  choice={choice}
+                  label="Recorrido por Wallex en el celular: filtros, ficha del inmueble y comparador"
+                />
               </div>
             </div>
-            <figcaption className="mt-4 text-[13px] font-semibold text-ink-soft text-center md:text-left">En el celular</figcaption>
+            <figcaption className="mt-4 flex flex-col items-center md:items-start gap-2.5 text-[13px] font-semibold text-ink-soft">
+              En el celular
+              <button
+                type="button"
+                onClick={() => setChoice(running ? 'pause' : 'play')}
+                className={`inline-flex items-center gap-1.5 text-ink rounded ${press} ${focusRing}`}
+              >
+                <span className="grid place-items-center size-6 rounded-full border border-ink">
+                  <VideoToggleIcon playing={running} />
+                </span>
+                <span className="link-grow">{running ? 'Pausar los recorridos' : 'Ver los recorridos'}</span>
+              </button>
+            </figcaption>
           </figure>
         </div>
       </div>
@@ -423,7 +546,7 @@ const FinalCta: React.FC = () => (
       </div>
       <p className="mt-4 text-[13px] text-ink-soft">
         O{' '}
-        <a href="/" className={`font-semibold text-ink underline underline-offset-4 rounded ${focusRing}`}>
+        <a href="/" className={`link-line font-semibold text-ink rounded ${focusRing}`}>
           mira todos los arriendos
         </a>
         .
@@ -441,7 +564,7 @@ export const Landing: React.FC = () => {
     <div className="min-h-screen bg-paper text-ink">
       <Header />
       <main>
-        <Hero />
+        <Hero still={still} />
         <Microprint tone="night" />
         {pinned ? <ChaosPinned /> : <ChaosStacked still={still} />}
         <Microprint tone="night" direction={-1} />
@@ -453,12 +576,14 @@ export const Landing: React.FC = () => {
         <Microprint direction={-1} />
         <FinalCta />
       </main>
-      <Footer
-        links={[
-          { label: 'Buscar vivienda', href: '/#buscar' },
-          { label: 'Comparador lado a lado', href: '/#comparar' },
-        ]}
-      />
+      <div data-header="night">
+        <Footer
+          links={[
+            { label: 'Buscar vivienda', href: '/#buscar' },
+            { label: 'Comparador lado a lado', href: '/#comparar' },
+          ]}
+        />
+      </div>
     </div>
   );
 };
