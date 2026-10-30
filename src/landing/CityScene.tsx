@@ -1,13 +1,13 @@
 import React from 'react';
-import clipPhone from '../assets/landing/bogota-la-soledad-celular.mp4';
-import posterPhone from '../assets/landing/bogota-la-soledad-celular.webp';
-import clipDesktop from '../assets/landing/bogota-la-soledad-escritorio.mp4';
-import posterDesktop from '../assets/landing/bogota-la-soledad-escritorio.webp';
+import clipPhone from '../assets/landing/bogota-atardecer-centro-celular.mp4';
+import posterPhone from '../assets/landing/bogota-atardecer-centro-celular.webp';
+import clipDesktop from '../assets/landing/bogota-atardecer-centro-escritorio.mp4';
+import posterDesktop from '../assets/landing/bogota-atardecer-centro-escritorio.webp';
 import { LoopVideo } from './LoopVideo';
 import { easeInOut, easeOut, segment, useMediaQuery, useSmoothSceneProgress, useViewProgress } from './scroll';
 
-const LABEL = 'Vuelo sobre el barrio La Soledad, en Teusaquillo, Bogotá, con los cerros orientales al fondo';
-const CREDIT = 'La Soledad, Teusaquillo. Video de Julián Armando Santos en Pexels.';
+const LABEL = 'Atardecer en Bogotá: el centro internacional, los cerros orientales y los tejados tradicionales';
+const CREDIT = 'Centro y cerros orientales al atardecer. Video de Julián Armando Santos en Pexels.';
 
 const overlayCopy = (
   <>
