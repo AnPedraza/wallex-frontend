@@ -76,6 +76,34 @@
   background-size: 100% 2px;
 }
 
+/* Filas deslizables en celular: encajan cada tarjeta en su sitio y esfuman la orilla derecha */
+@media (max-width: 767px) {
+  .snap-row {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 1rem;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    mask-image: linear-gradient(to right, transparent, #000 12px, #000 calc(100% - 36px), transparent);
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 12px, #000 calc(100% - 36px), transparent);
+  }
+  .snap-row::-webkit-scrollbar {
+    display: none;
+  }
+  .snap-item {
+    flex: 0 0 82%;
+    max-width: 320px;
+    scroll-snap-align: start;
+  }
+}
+@media (min-width: 640px) and (max-width: 767px) {
+  .snap-row {
+    scroll-padding-inline: 1.5rem;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .enter-word > span,
   .enter-up,

@@ -403,9 +403,14 @@ const CompareStacked: React.FC<{ still: boolean }> = ({ still }) => {
   return (
     <section id="comparar" className="border-t border-rule px-4 sm:px-6 lg:px-10 py-16 max-w-[1440px] mx-auto">
       {compareCopy}
-      <div ref={ref} className="mt-10 grid gap-4 md:grid-cols-3">
+      <div
+        ref={ref}
+        className="snap-row -mx-4 px-4 pr-10 sm:-mx-6 sm:px-6 sm:pr-12 md:mx-0 md:px-0 mt-10 gap-3.5 md:grid md:grid-cols-3 md:gap-4"
+      >
         {compareRows.map((row) => (
-          <CompareCard key={row.p.id} row={row} grow={grow} marked={grow >= 1 && row === cheapest} />
+          <div key={row.p.id} className="snap-item">
+            <CompareCard row={row} grow={grow} marked={grow >= 1 && row === cheapest} />
+          </div>
         ))}
       </div>
       <a href="/#comparar" className={`link-line inline-block mt-6 text-[15px] font-semibold rounded ${focusRing}`}>
@@ -424,7 +429,7 @@ const HOW = [
   },
 ];
 
-// Los pasos van unidos por un filete que se traza al entrar
+// Los pasos van unidos por un filete que se traza al entrar; en celular van en fila deslizable
 const HowItWorks: React.FC<{ still: boolean }> = ({ still }) => {
   const [ref, seen] = useInView<HTMLOListElement>(0.35);
   const on = still || seen;
@@ -433,7 +438,10 @@ const HowItWorks: React.FC<{ still: boolean }> = ({ still }) => {
     <section className="border-t border-rule bg-surface">
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-16 lg:py-24">
         <h2 className="text-[2rem] lg:text-[3.25rem] leading-[1.08] font-extrabold tracking-[-0.03em]">Así funciona.</h2>
-        <ol ref={ref} className="relative mt-10 lg:mt-14 grid gap-10 md:grid-cols-3 md:gap-8">
+        <ol
+          ref={ref}
+          className="snap-row relative -mx-4 px-4 pr-10 sm:-mx-6 sm:px-6 sm:pr-12 md:mx-0 md:px-0 mt-10 lg:mt-14 gap-3.5 md:grid md:grid-cols-3 md:gap-8"
+        >
           <span
             aria-hidden="true"
             className={`hidden md:block absolute top-[5px] left-0 right-0 h-px bg-ink origin-left transition-transform duration-[1400ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${
@@ -443,10 +451,16 @@ const HowItWorks: React.FC<{ still: boolean }> = ({ still }) => {
           {HOW.map((h, i) => (
             <li
               key={h.title}
-              className="relative md:pt-8 transition-opacity duration-700"
+              className="snap-item relative max-md:bg-paper max-md:border max-md:border-rule max-md:rounded-[10px] max-md:p-5 md:pt-8 transition-opacity duration-700"
               style={{ opacity: on ? 1 : 0, transitionDelay: still ? '0ms' : `${200 + i * 260}ms` }}
             >
               <span aria-hidden="true" className="hidden md:block absolute top-0 left-0 size-[11px] rounded-full bg-ink" />
+              <span
+                aria-hidden="true"
+                className="md:hidden inline-grid place-items-center size-6 rounded-full bg-ink text-white text-[12px] font-bold mb-3"
+              >
+                {i + 1}
+              </span>
               <h3 className="text-[17px] font-bold">{h.title}</h3>
               <p className="mt-2 text-[15px] text-ink-soft max-w-[36ch]">{h.body}</p>
             </li>
