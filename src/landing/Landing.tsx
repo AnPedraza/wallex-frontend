@@ -130,11 +130,14 @@ const Header: React.FC = () => {
             <span className="text-[21px] font-extrabold tracking-[-0.02em]">Wallex</span>
           </a>
           <nav aria-label="Secciones de la página" className="hidden md:flex items-center gap-7">
-            <a href="#anatomia" className={`link-grow text-[15px] font-semibold transition-colors duration-300 ${t.soft} ${ring}`}>
-              Cómo funciona
+            <a href="#ficha" className={`link-grow text-[15px] font-semibold transition-colors duration-300 ${t.soft} ${ring}`}>
+              La ficha
             </a>
             <a href="#comparar" className={`link-grow text-[15px] font-semibold transition-colors duration-300 ${t.soft} ${ring}`}>
               Comparar
+            </a>
+            <a href="#como-funciona" className={`link-grow text-[15px] font-semibold transition-colors duration-300 ${t.soft} ${ring}`}>
+              Cómo funciona
             </a>
           </nav>
         </div>
@@ -195,7 +198,7 @@ const Hero: React.FC<{ still: boolean }> = ({ still }) => {
         </p>
       </div>
 
-      <div className="lg:pr-40">
+      <div className="lg:pr-28 xl:pr-36 2xl:pr-40 flex flex-col items-center lg:items-end">
         <FichaDemo marks={STEPS.map((s) => s.title)} entrance totalProgress={still ? 1 : count} href={fichaLink(DEMO.id)} />
         <ol className="lg:hidden mt-4 grid gap-1.5 text-[13px] max-w-[420px]">
           {STEPS.map((s) => (
@@ -217,7 +220,7 @@ const AnatomyPinned: React.FC = () => {
   const active = STEPS[step].part;
 
   return (
-    <section ref={ref} id="anatomia" className="relative h-[230vh] border-t border-rule bg-surface">
+    <section ref={ref} id="ficha" className="relative h-[230vh] border-t border-rule bg-surface scroll-mt-20">
       <div className="sticky top-16 h-[calc(100vh-4rem)] max-w-[1440px] mx-auto px-10 grid grid-cols-[minmax(0,480px)_420px] justify-center gap-x-[160px] items-center">
         <div>
           <h2 className="text-[3.25rem] leading-[1.08] font-extrabold tracking-[-0.03em] max-w-[14ch]">Una ficha, tres respuestas.</h2>
@@ -282,7 +285,7 @@ const AnatomyStep: React.FC<{ index: number; still: boolean }> = ({ index, still
 };
 
 const AnatomyStacked: React.FC<{ still: boolean }> = ({ still }) => (
-  <section id="anatomia" className="border-t border-rule bg-surface">
+  <section id="ficha" className="border-t border-rule bg-surface scroll-mt-20">
     <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-16 lg:py-24">
       <h2 className="text-[2rem] lg:text-[3.25rem] leading-[1.08] font-extrabold tracking-[-0.03em]">Una ficha, tres respuestas.</h2>
       <ol className="mt-10 grid gap-12 max-w-[520px] lg:max-w-none lg:grid-cols-3 lg:gap-8 lg:items-start">
@@ -433,7 +436,15 @@ const CompareCard: React.FC<{ row: (typeof compareRows)[number]; grow: number; m
               </div>
             </div>
           ) : (
-            <span className="text-[12px] text-ink-faint truncate">{p.transitAccess}</span>
+            <div className="flex items-center justify-between w-full">
+              <div>
+                <p className="text-[12px] font-bold leading-tight text-ink">+{cop(total - cheapest.total)} al mes</p>
+                <p className="text-[11px] text-ink-soft leading-tight">frente a la menor opción</p>
+              </div>
+              <span className="text-[11.5px] text-ink-faint hidden sm:inline max-w-[130px] truncate text-right">
+                {p.transitAccess.split(' y ')[0]}
+              </span>
+            </div>
           )}
         </div>
       </div>
@@ -459,7 +470,7 @@ const ComparePinned: React.FC = () => {
   const grow = segment(p, 0.4, 0.72);
 
   return (
-    <section ref={ref} id="comparar" className="relative h-[170vh] border-t border-rule">
+    <section ref={ref} id="comparar" className="relative h-[170vh] border-t border-rule scroll-mt-20">
       <div className="sticky top-16 h-[calc(100vh-4rem)] max-w-[1440px] mx-auto px-10 flex flex-col justify-center">
         {compareCopy}
         <div className="mt-12 grid grid-cols-3 gap-6">
@@ -489,7 +500,7 @@ const CompareStacked: React.FC<{ still: boolean }> = ({ still }) => {
   const grow = still ? 1 : run;
 
   return (
-    <section id="comparar" className="border-t border-rule px-4 sm:px-6 lg:px-10 py-16 max-w-[1440px] mx-auto">
+    <section id="comparar" className="border-t border-rule scroll-mt-20 px-4 sm:px-6 lg:px-10 py-16 max-w-[1440px] mx-auto">
       {compareCopy}
       <div
         ref={ref}
@@ -524,7 +535,7 @@ const HowItWorks: React.FC<{ still: boolean }> = ({ still }) => {
   const on = still || seen;
 
   return (
-    <section className="border-t border-rule bg-surface">
+    <section id="como-funciona" className="border-t border-rule bg-surface scroll-mt-20">
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-16 lg:py-24">
         <h2 className="text-[2rem] lg:text-[3.25rem] leading-[1.08] font-extrabold tracking-[-0.03em]">Así funciona.</h2>
         <ol

@@ -70,7 +70,7 @@ export const LoopVideo: React.FC<LoopVideoProps> = ({
         muted
         loop
         playsInline
-        preload="none"
+        preload="metadata"
         aria-label={label}
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
