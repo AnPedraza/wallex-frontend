@@ -4,6 +4,7 @@ import clipPhone from '../assets/landing/app-recorrido-celular.mp4';
 import posterPhone from '../assets/landing/app-recorrido-celular.webp';
 import clipDesktop from '../assets/landing/app-recorrido-escritorio.mp4';
 import posterDesktop from '../assets/landing/app-recorrido-escritorio.webp';
+import { FolioSeal } from '../components/FolioSeal';
 import { Footer } from '../components/Footer';
 import { ChaosPinned, ChaosStacked } from './ChaosScene';
 import { CityPinned, CityStacked } from './CityScene';
@@ -302,6 +303,67 @@ const scaleMax = Math.max(...compareRows.map((r) => r.total));
 const cheapest = compareRows.reduce((a, b) => (b.total < a.total ? b : a));
 const saving = scaleMax - cheapest.total;
 
+// Indicadores de posición táctiles para filas deslizables en celular
+const SnapDots: React.FC<{
+  containerRef: React.RefObject<HTMLElement | null>;
+  count: number;
+}> = ({ containerRef, count }) => {
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const handleScroll = () => {
+      const scrollLeft = el.scrollLeft;
+      const children = Array.from(el.children).filter((c) => c.classList.contains('snap-item')) as HTMLElement[];
+      if (children.length > 0) {
+        let closestIdx = 0;
+        let minDiff = Infinity;
+        children.forEach((child, i) => {
+          const diff = Math.abs(child.offsetLeft - el.offsetLeft - scrollLeft);
+          if (diff < minDiff) {
+            minDiff = diff;
+            closestIdx = i;
+          }
+        });
+        setActiveIndex(closestIdx);
+      }
+    };
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, [containerRef]);
+
+  const scrollTo = (idx: number) => {
+    const el = containerRef.current;
+    if (!el) return;
+    const children = Array.from(el.children).filter((c) => c.classList.contains('snap-item')) as HTMLElement[];
+    if (children[idx]) {
+      children[idx].scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'center',
+      });
+    }
+  };
+
+  return (
+    <div className="md:hidden flex items-center justify-center gap-1.5 mt-4" aria-hidden="true">
+      {Array.from({ length: count }).map((_, i) => (
+        <button
+          key={i}
+          type="button"
+          tabIndex={-1}
+          onClick={() => scrollTo(i)}
+          className={`h-1.5 rounded-full transition-all duration-300 focus:outline-none ${
+            i === activeIndex ? 'w-6 bg-ink' : 'w-2 bg-rule'
+          }`}
+          aria-label={`Ver tarjeta ${i + 1} de ${count}`}
+        />
+      ))}
+    </div>
+  );
+};
+
 const CompareCard: React.FC<{ row: (typeof compareRows)[number]; grow: number; marked: boolean }> = ({ row, grow, marked }) => {
   const { p, transport, total } = row;
   const parts = [
@@ -312,43 +374,69 @@ const CompareCard: React.FC<{ row: (typeof compareRows)[number]; grow: number; m
   return (
     <a
       href={fichaLink(p.id)}
-      className={`ficha-link group block bg-surface border rounded-[10px] p-5 transition-colors duration-300 hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink ${
+      className={`ficha-link group block bg-surface border rounded-[10px] overflow-hidden transition-colors duration-300 hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink ${
         marked ? 'border-ink' : 'border-rule'
       }`}
     >
-      <h3 className="text-[17px] font-bold tracking-[-0.01em]">
-        <span className="link-grow">{p.title}</span>
-      </h3>
-      <p className="text-[13px] text-ink-soft mt-0.5">
-        {p.zone} · {p.area} m²
-      </p>
-      <p className="mt-5 flex items-baseline gap-1.5">
-        <strong
-          className="text-[28px] font-extrabold tracking-[-0.02em] leading-none transition-opacity duration-300"
-          style={{ opacity: grow > 0 ? 1 : 0.2 }}
-        >
-          {cop(Math.round(total * easeOut(grow)))}
-        </strong>
-        <span className="text-[13px] text-ink-soft">al mes</span>
-      </p>
-      <div className="mt-3 h-2.5 rounded-[2px] bg-paper overflow-hidden" aria-hidden="true">
-        <div className="h-full flex gap-px" style={{ width: `${(total / scaleMax) * 100 * easeOut(grow)}%` }}>
+      <div className="relative aspect-[16/10] overflow-hidden bg-rule">
+        <img
+          src={p.image}
+          alt={p.title}
+          loading="lazy"
+          className="size-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.04]"
+        />
+        {p.verified && (
+          <span className="absolute top-2.5 left-2.5 inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-bold bg-surface/95 text-ink border border-rule">
+            <span className="size-1.5 rounded-full bg-verified" aria-hidden="true" />
+            Verificado
+          </span>
+        )}
+      </div>
+      <div className="p-5">
+        <h3 className="text-[17px] font-bold tracking-[-0.01em]">
+          <span className="link-grow">{p.title}</span>
+        </h3>
+        <p className="text-[13px] text-ink-soft mt-0.5">
+          {p.bedrooms} {p.bedrooms === 1 ? 'hab' : 'habs'} · {p.bathrooms} {p.bathrooms === 1 ? 'baño' : 'baños'} · {p.area} m² · {p.zone}
+        </p>
+        <p className="mt-4 flex items-baseline gap-1.5">
+          <strong
+            className="text-[26px] font-extrabold tracking-[-0.02em] leading-none transition-opacity duration-300"
+            style={{ opacity: grow > 0 ? 1 : 0.2 }}
+          >
+            {cop(Math.round(total * easeOut(grow)))}
+          </strong>
+          <span className="text-[13px] text-ink-soft">al mes</span>
+        </p>
+        <div className="mt-3 h-2.5 rounded-[2px] bg-paper overflow-hidden" aria-hidden="true">
+          <div className="h-full flex gap-px" style={{ width: `${(total / scaleMax) * 100 * easeOut(grow)}%` }}>
+            {parts.map((part) => (
+              <span key={part.label} className={part.className} style={{ width: `${(part.value / total) * 100}%` }} />
+            ))}
+          </div>
+        </div>
+        <dl className="mt-3 text-[12.5px] space-y-0.5">
           {parts.map((part) => (
-            <span key={part.label} className={part.className} style={{ width: `${(part.value / total) * 100}%` }} />
+            <div key={part.label} className="flex justify-between">
+              <dt className="text-ink-soft">{part.label}</dt>
+              <dd className="font-semibold">{num(part.value)}</dd>
+            </div>
           ))}
+        </dl>
+        <div className="mt-4 pt-3 border-t border-rule min-h-[46px] flex items-center justify-between text-[12px]">
+          {row === cheapest ? (
+            <div className={`flex items-center gap-2.5 transition-opacity duration-500 ${marked ? 'opacity-100' : 'opacity-0'}`}>
+              <FolioSeal seed={p.id} status="verified" size={24} />
+              <div>
+                <p className="text-[12px] font-bold leading-tight text-ink">Menor total del mes</p>
+                <p className="text-[11px] text-ink-soft leading-tight">Ahorras {cop(saving)} frente a la más cara</p>
+              </div>
+            </div>
+          ) : (
+            <span className="text-[12px] text-ink-faint truncate">{p.transitAccess}</span>
+          )}
         </div>
       </div>
-      <dl className="mt-3 text-[12.5px] space-y-0.5">
-        {parts.map((part) => (
-          <div key={part.label} className="flex justify-between">
-            <dt className="text-ink-soft">{part.label}</dt>
-            <dd className="font-semibold">{num(part.value)}</dd>
-          </div>
-        ))}
-      </dl>
-      <p className={`mt-4 text-[13px] font-semibold transition-opacity duration-500 ${marked ? 'opacity-100' : 'opacity-0'}`}>
-        La de menor total del mes
-      </p>
     </a>
   );
 };
@@ -413,6 +501,7 @@ const CompareStacked: React.FC<{ still: boolean }> = ({ still }) => {
           </div>
         ))}
       </div>
+      <SnapDots containerRef={ref} count={compareRows.length} />
       <a href="/#comparar" className={`link-line inline-block mt-6 text-[15px] font-semibold rounded ${focusRing}`}>
         Abrir el comparador
       </a>
@@ -466,6 +555,7 @@ const HowItWorks: React.FC<{ still: boolean }> = ({ still }) => {
             </li>
           ))}
         </ol>
+        <SnapDots containerRef={ref} count={HOW.length} />
       </div>
     </section>
   );

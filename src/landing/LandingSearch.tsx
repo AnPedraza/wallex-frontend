@@ -43,7 +43,7 @@ export const LandingSearch: React.FC<LandingSearchProps> = ({ compact = false })
       <div>
         <label htmlFor={`${ids}-max`} className="flex justify-between text-[13px] font-semibold text-ink-soft">
           Total del mes hasta
-          <output htmlFor={`${ids}-max`} className="text-ink font-extrabold">
+          <output htmlFor={`${ids}-max`} className="text-ink font-extrabold tracking-[-0.01em]">
             {cop(max)}
           </output>
         </label>
@@ -59,13 +59,20 @@ export const LandingSearch: React.FC<LandingSearchProps> = ({ compact = false })
           className="folio-range mt-1"
           style={{ ['--fill' as string]: fill } as React.CSSProperties}
         />
+        <div className="flex items-center justify-between text-[11px] text-ink-faint mt-1.5 px-0.5">
+          <span>{cop(RANGE_MIN)}</span>
+          <span className="font-semibold text-ink-soft">
+            {count === 0 ? 'Sin opciones en este rango' : `${count} ${count === 1 ? 'arriendo entra' : 'arriendos entran'}`}
+          </span>
+          <span>{cop(RANGE_MAX)}</span>
+        </div>
       </div>
       <button
         type="submit"
         disabled={count === 0}
         className={`${compact ? '' : 'sm:col-span-2'} bg-ink text-white font-semibold text-[15px] px-6 py-3 rounded-lg hover:bg-ink-hover active:scale-[0.98] disabled:opacity-45 disabled:cursor-not-allowed disabled:active:scale-100 transition-[background-color,transform] duration-150`}
       >
-        {count === 0 ? 'Sube el tope para ver arriendos' : `Ver ${count} ${count === 1 ? 'arriendo' : 'arriendos'}`}
+        {count === 0 ? 'Sube el tope para ver arriendos' : `Ver ${count} ${count === 1 ? 'arriendo disponible' : 'arriendos disponibles'}`}
       </button>
     </form>
   );

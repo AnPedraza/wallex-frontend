@@ -29,6 +29,7 @@ export const CityPinned: React.FC = () => {
   const k = 1 - o;
   const before = 1 - easeInOut(segment(p, 0.12, 0.32));
   const after = easeInOut(segment(p, 0.5, 0.7));
+  const exit = easeInOut(segment(p, 0.84, 0.98));
 
   return (
     <section ref={ref} className="relative h-[190vh]">
@@ -43,7 +44,7 @@ export const CityPinned: React.FC = () => {
         </div>
         <div
           className="absolute inset-0"
-          data-header={o > 0.92 ? 'clear' : undefined}
+          data-header={o > 0.92 && exit < 0.7 ? 'clear' : undefined}
           style={{ clipPath: `inset(${18 * k}% ${8 * k}% ${18 * k}% ${52 * k}% round ${10 * k}px)` }}
         >
           <div className="size-full" style={{ transform: `scale(${1.1 - 0.1 * o})` }}>
@@ -53,13 +54,25 @@ export const CityPinned: React.FC = () => {
         </div>
         <div
           className="absolute left-10 bottom-16 max-w-[820px]"
-          style={{ opacity: after, transform: `translateY(${(1 - after) * 24}px)` }}
+          style={{
+            opacity: after * (1 - exit),
+            transform: `translateY(${(1 - after) * 24 - exit * 20}px)`,
+          }}
         >
           {overlayCopy}
         </div>
-        <p className="absolute right-20 bottom-7 text-[12.5px] text-white/85" style={{ opacity: after }}>
+        <p
+          className="absolute right-20 bottom-7 text-[12.5px] text-white/85"
+          style={{ opacity: after * (1 - exit) }}
+        >
           {CREDIT}
         </p>
+        {/* Disolución suave del fondo hacia el inicio de la siguiente sección */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-surface via-surface/60 to-transparent transition-opacity duration-300"
+          style={{ opacity: exit }}
+        />
       </div>
     </section>
   );
