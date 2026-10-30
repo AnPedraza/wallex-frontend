@@ -12,6 +12,7 @@ import { FichaDemo, type FichaPart } from './FichaDemo';
 import { LandingSearch } from './LandingSearch';
 import { LoopVideo, VideoToggleIcon, type VideoChoice } from './LoopVideo';
 import { Microprint } from './Microprint';
+import { MonthGaugeSection } from './MonthGauge';
 import {
   easeOut,
   segment,
@@ -134,6 +135,9 @@ const Header: React.FC = () => {
             </a>
             <a href="#comparar" className={`link-grow text-[15px] font-semibold transition-colors duration-300 ${t.soft} ${ring}`}>
               Comparar
+            </a>
+            <a href="#medidor" className={`link-grow text-[15px] font-semibold transition-colors duration-300 ${t.soft} ${ring}`}>
+              El medidor
             </a>
           </nav>
         </div>
@@ -572,6 +576,7 @@ export const Landing: React.FC = () => {
         {pinned ? <ComparePinned /> : <CompareStacked still={still} />}
         {pinned ? <CityPinned /> : <CityStacked still={still} />}
         <HowItWorks still={still} />
+        <MonthGaugeSection />
         <Screens still={still} />
         <Microprint direction={-1} />
         <FinalCta />
