@@ -4,7 +4,6 @@ import clipPhone from '../assets/landing/app-recorrido-celular.mp4';
 import posterPhone from '../assets/landing/app-recorrido-celular.webp';
 import clipDesktop from '../assets/landing/app-recorrido-escritorio.mp4';
 import posterDesktop from '../assets/landing/app-recorrido-escritorio.webp';
-import { FolioSeal } from '../components/FolioSeal';
 import { Footer } from '../components/Footer';
 import { ChaosPinned, ChaosStacked } from './ChaosScene';
 import { CityPinned, CityStacked } from './CityScene';
@@ -129,7 +128,7 @@ const Header: React.FC = () => {
             <img src={logo} alt="" className="h-10 w-10" />
             <span className="text-[21px] font-extrabold tracking-[-0.02em]">Wallex</span>
           </a>
-          <nav aria-label="Secciones de la página" className="hidden md:flex items-center gap-7">
+          <nav aria-label="Secciones de la página" className="hidden lg:flex items-center gap-7">
             <a href="#ficha" className={`link-grow text-[15px] font-semibold transition-colors duration-300 ${t.soft} ${ring}`}>
               La ficha
             </a>
@@ -166,6 +165,13 @@ const Header: React.FC = () => {
 const HEADLINE = 'Arrendar en Bogotá sin adivinar cuánto pagas ni de quién fiarte.';
 const enter = (ms: number) => ({ ['--delay' as string]: `${ms}ms` }) as React.CSSProperties;
 
+// Una palabra del titular: todas suben igual, una tras otra; el h1 lleva el texto completo en aria-label
+const RisingWord: React.FC<{ word: string; delay: number }> = ({ word, delay }) => (
+  <span className="enter-word" aria-hidden="true">
+    <span style={enter(delay)}>{word}</span>
+  </span>
+);
+
 // La entrada del inicio es la única secuencia al cargar: el titular sube palabra por palabra,
 // después el buscador y la ficha, que se arma, suma su total y al final recibe sus rótulos.
 const Hero: React.FC<{ still: boolean }> = ({ still }) => {
@@ -181,9 +187,7 @@ const Hero: React.FC<{ still: boolean }> = ({ still }) => {
           {HEADLINE.split(' ').map((word, i) => (
             <React.Fragment key={i}>
               {i > 0 && ' '}
-              <span className="enter-word" aria-hidden="true">
-                <span style={enter(60 + i * 38)}>{word}</span>
-              </span>
+              <RisingWord word={word} delay={60 + i * 38} />
             </React.Fragment>
           ))}
         </h1>
@@ -198,7 +202,7 @@ const Hero: React.FC<{ still: boolean }> = ({ still }) => {
         </p>
       </div>
 
-      <div className="lg:pr-28 xl:pr-36 2xl:pr-40 flex flex-col items-center lg:items-end">
+      <div className="lg:pr-40 flex flex-col items-center lg:items-end">
         <FichaDemo marks={STEPS.map((s) => s.title)} entrance totalProgress={still ? 1 : count} href={fichaLink(DEMO.id)} />
         <ol className="lg:hidden mt-4 grid gap-1.5 text-[13px] max-w-[420px]">
           {STEPS.map((s) => (
@@ -306,62 +310,43 @@ const scaleMax = Math.max(...compareRows.map((r) => r.total));
 const cheapest = compareRows.reduce((a, b) => (b.total < a.total ? b : a));
 const saving = scaleMax - cheapest.total;
 
-// Indicadores de posición táctiles para filas deslizables en celular
+const snapItems = (row: HTMLElement) => Array.from(row.children).filter((c): c is HTMLElement => c.classList.contains('snap-item'));
+
+// Puntos bajo una fila deslizable: marcan la tarjeta a la vista y llevan a otra con un toque.
+// Son una ayuda visual; con lector de pantalla las tarjetas se leen en orden.
 const SnapDots: React.FC<{
   containerRef: React.RefObject<HTMLElement | null>;
   count: number;
-}> = ({ containerRef, count }) => {
-  const [activeIndex, setActiveIndex] = useState(0);
+  className?: string; // desde qué ancho se esconden, igual que la fila
+}> = ({ containerRef, count, className = 'md:hidden' }) => {
+  const [active, setActive] = useState(0);
+  const still = useReducedMotion();
 
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const handleScroll = () => {
-      const scrollLeft = el.scrollLeft;
-      const children = Array.from(el.children).filter((c) => c.classList.contains('snap-item')) as HTMLElement[];
-      if (children.length > 0) {
-        let closestIdx = 0;
-        let minDiff = Infinity;
-        children.forEach((child, i) => {
-          const diff = Math.abs(child.offsetLeft - el.offsetLeft - scrollLeft);
-          if (diff < minDiff) {
-            minDiff = diff;
-            closestIdx = i;
-          }
-        });
-        setActiveIndex(closestIdx);
-      }
+    const row = containerRef.current;
+    if (!row) return;
+    const onScroll = () => {
+      const left = row.getBoundingClientRect().left;
+      const offsets = snapItems(row).map((item) => Math.abs(item.getBoundingClientRect().left - left));
+      setActive(offsets.indexOf(Math.min(...offsets)));
     };
-    el.addEventListener('scroll', handleScroll, { passive: true });
-    return () => el.removeEventListener('scroll', handleScroll);
+    row.addEventListener('scroll', onScroll, { passive: true });
+    return () => row.removeEventListener('scroll', onScroll);
   }, [containerRef]);
 
-  const scrollTo = (idx: number) => {
-    const el = containerRef.current;
-    if (!el) return;
-    const children = Array.from(el.children).filter((c) => c.classList.contains('snap-item')) as HTMLElement[];
-    if (children[idx]) {
-      children[idx].scrollIntoView({
-        behavior: 'smooth',
-        block: 'nearest',
-        inline: 'center',
-      });
-    }
+  const go = (i: number) => {
+    const row = containerRef.current;
+    if (row) snapItems(row)[i]?.scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: 'nearest', inline: 'start' });
   };
 
   return (
-    <div className="md:hidden flex items-center justify-center gap-1.5 mt-4" aria-hidden="true">
-      {Array.from({ length: count }).map((_, i) => (
-        <button
-          key={i}
-          type="button"
-          tabIndex={-1}
-          onClick={() => scrollTo(i)}
-          className={`h-1.5 rounded-full transition-all duration-300 focus:outline-none ${
-            i === activeIndex ? 'w-6 bg-ink' : 'w-2 bg-rule'
-          }`}
-          aria-label={`Ver tarjeta ${i + 1} de ${count}`}
-        />
+    <div className={`${className} flex items-center justify-center mt-1.5`} aria-hidden="true">
+      {Array.from({ length: count }, (_, i) => (
+        <button key={i} type="button" tabIndex={-1} onClick={() => go(i)} className="px-1.5 py-[9px]">
+          <span
+            className={`block h-1.5 rounded-full transition-[width,background-color] duration-300 ${i === active ? 'w-6 bg-ink' : 'w-2 bg-rule'}`}
+          />
+        </button>
       ))}
     </div>
   );
@@ -377,34 +362,35 @@ const CompareCard: React.FC<{ row: (typeof compareRows)[number]; grow: number; m
   return (
     <a
       href={fichaLink(p.id)}
-      className={`ficha-link group block bg-surface border rounded-[10px] overflow-hidden transition-colors duration-300 hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink ${
+      className={`ficha-link group flex flex-col h-full bg-surface border rounded-[10px] overflow-hidden transition-colors duration-300 hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink ${
         marked ? 'border-ink' : 'border-rule'
       }`}
     >
-      <div className="relative aspect-[16/10] overflow-hidden bg-rule">
+      {/* La foto cede alto cuando la pantalla es baja, para que la escena fija quepa completa */}
+      <div className="relative aspect-[16/10] min-h-16 overflow-hidden bg-rule">
         <img
           src={p.image}
-          alt={p.title}
+          alt=""
           loading="lazy"
           className="size-full object-cover transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-[1.04]"
         />
         {p.verified && (
-          <span className="absolute top-2.5 left-2.5 inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-bold bg-surface/95 text-ink border border-rule">
+          <span className="absolute top-2.5 left-2.5 inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[12px] font-bold bg-surface/95 text-ink border border-rule">
             <span className="size-1.5 rounded-full bg-verified" aria-hidden="true" />
             Verificado
           </span>
         )}
       </div>
-      <div className="p-5">
+      <div className="p-5 flex flex-col grow">
         <h3 className="text-[17px] font-bold tracking-[-0.01em]">
           <span className="link-grow">{p.title}</span>
         </h3>
         <p className="text-[13px] text-ink-soft mt-0.5">
-          {p.bedrooms} {p.bedrooms === 1 ? 'hab' : 'habs'} · {p.bathrooms} {p.bathrooms === 1 ? 'baño' : 'baños'} · {p.area} m² · {p.zone}
+          {p.bedrooms} hab · {p.bathrooms} {p.bathrooms === 1 ? 'baño' : 'baños'} · {p.area} m² · {p.zone}
         </p>
         <p className="mt-4 flex items-baseline gap-1.5">
           <strong
-            className="text-[26px] font-extrabold tracking-[-0.02em] leading-none transition-opacity duration-300"
+            className="text-[28px] font-extrabold tracking-[-0.02em] leading-none transition-opacity duration-300"
             style={{ opacity: grow > 0 ? 1 : 0.2 }}
           >
             {cop(Math.round(total * easeOut(grow)))}
@@ -418,7 +404,7 @@ const CompareCard: React.FC<{ row: (typeof compareRows)[number]; grow: number; m
             ))}
           </div>
         </div>
-        <dl className="mt-3 text-[12.5px] space-y-0.5">
+        <dl className="mt-3 mb-4 text-[12.5px] space-y-0.5">
           {parts.map((part) => (
             <div key={part.label} className="flex justify-between">
               <dt className="text-ink-soft">{part.label}</dt>
@@ -426,24 +412,17 @@ const CompareCard: React.FC<{ row: (typeof compareRows)[number]; grow: number; m
             </div>
           ))}
         </dl>
-        <div className="mt-4 pt-3 border-t border-rule min-h-[46px] flex items-center justify-between text-[12px]">
+        {/* El pie va con texto y sin sello: la roseta solo dice quién está verificado */}
+        <div className="mt-auto pt-3 border-t border-rule min-h-[46px] flex flex-col justify-center">
           {row === cheapest ? (
-            <div className={`flex items-center gap-2.5 transition-opacity duration-500 ${marked ? 'opacity-100' : 'opacity-0'}`}>
-              <FolioSeal seed={p.id} status="verified" size={24} />
-              <div>
-                <p className="text-[12px] font-bold leading-tight text-ink">Menor total del mes</p>
-                <p className="text-[11px] text-ink-soft leading-tight">Ahorras {cop(saving)} frente a la más cara</p>
-              </div>
+            <div className={`transition-opacity duration-500 ${marked ? 'opacity-100' : 'opacity-0'}`}>
+              <p className="text-[12px] font-bold leading-tight">Menor total del mes</p>
+              <p className="text-[12px] text-ink-soft leading-tight">Ahorras {cop(saving)} frente a la más cara</p>
             </div>
           ) : (
-            <div className="flex items-center justify-between w-full">
-              <div>
-                <p className="text-[12px] font-bold leading-tight text-ink">+{cop(total - cheapest.total)} al mes</p>
-                <p className="text-[11px] text-ink-soft leading-tight">frente a la menor opción</p>
-              </div>
-              <span className="text-[11.5px] text-ink-faint hidden sm:inline max-w-[130px] truncate text-right">
-                {p.transitAccess.split(' y ')[0]}
-              </span>
+            <div className={`transition-opacity duration-500 ${grow >= 1 ? 'opacity-100' : 'opacity-0'}`}>
+              <p className="text-[12px] font-bold leading-tight">+{cop(total - cheapest.total)} al mes</p>
+              <p className="text-[12px] text-ink-soft leading-tight">frente a la menor opción</p>
             </div>
           )}
         </div>
@@ -473,10 +452,12 @@ const ComparePinned: React.FC = () => {
     <section ref={ref} id="comparar" className="relative h-[170vh] border-t border-rule scroll-mt-20">
       <div className="sticky top-16 h-[calc(100vh-4rem)] max-w-[1440px] mx-auto px-10 flex flex-col justify-center">
         {compareCopy}
-        <div className="mt-12 grid grid-cols-3 gap-6">
+        {/* La fila puede encogerse: en pantallas bajas ceden las fotos y no el texto */}
+        <div className="mt-12 min-h-0 grid grid-cols-3 grid-rows-[minmax(0,1fr)] gap-6">
           {compareRows.map((row, i) => (
             <div
               key={row.p.id}
+              className="min-h-0"
               style={{
                 transform: `translateX(calc(${(1 - i) * (1 - fan)} * (100% + 1.5rem))) rotate(${(i - 1) * 3 * (1 - fan)}deg)`,
                 zIndex: i === 1 ? 2 : 1,
@@ -504,7 +485,7 @@ const CompareStacked: React.FC<{ still: boolean }> = ({ still }) => {
       {compareCopy}
       <div
         ref={ref}
-        className="snap-row -mx-4 px-4 pr-10 sm:-mx-6 sm:px-6 sm:pr-12 md:mx-0 md:px-0 mt-10 gap-3.5 md:grid md:grid-cols-3 md:gap-4"
+        className="snap-row-lg -mx-4 px-4 pr-10 sm:-mx-6 sm:px-6 sm:pr-12 lg:mx-0 lg:px-0 mt-10 gap-3.5 lg:grid lg:grid-cols-3 lg:gap-4"
       >
         {compareRows.map((row) => (
           <div key={row.p.id} className="snap-item">
@@ -512,7 +493,7 @@ const CompareStacked: React.FC<{ still: boolean }> = ({ still }) => {
           </div>
         ))}
       </div>
-      <SnapDots containerRef={ref} count={compareRows.length} />
+      <SnapDots containerRef={ref} count={compareRows.length} className="lg:hidden" />
       <a href="/#comparar" className={`link-line inline-block mt-6 text-[15px] font-semibold rounded ${focusRing}`}>
         Abrir el comparador
       </a>

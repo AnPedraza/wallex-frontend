@@ -76,7 +76,8 @@
   background-size: 100% 2px;
 }
 
-/* Filas deslizables en celular: encajan cada tarjeta en su sitio y esfuman la orilla derecha */
+/* Filas deslizables: encajan cada tarjeta en su sitio y esfuman la orilla derecha.
+   .snap-row va hasta 767 px; .snap-row-lg sigue hasta 1023 px, para tarjetas que no caben de a tres */
 @media (max-width: 767px) {
   .snap-row {
     display: flex;
@@ -86,20 +87,42 @@
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
     -ms-overflow-style: none;
-    mask-image: linear-gradient(to right, transparent, #000 12px, #000 calc(100% - 36px), transparent);
-    -webkit-mask-image: linear-gradient(to right, transparent, #000 12px, #000 calc(100% - 36px), transparent);
+    mask-image: linear-gradient(to right, transparent, var(--color-ink) 12px, var(--color-ink) calc(100% - 36px), transparent);
+    -webkit-mask-image: linear-gradient(to right, transparent, var(--color-ink) 12px, var(--color-ink) calc(100% - 36px), transparent);
   }
   .snap-row::-webkit-scrollbar {
     display: none;
   }
-  .snap-item {
+  .snap-row > .snap-item {
     flex: 0 0 82%;
     max-width: 320px;
     scroll-snap-align: start;
   }
 }
-@media (min-width: 640px) and (max-width: 767px) {
-  .snap-row {
+@media (max-width: 1023px) {
+  .snap-row-lg {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 1rem;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    mask-image: linear-gradient(to right, transparent, var(--color-ink) 12px, var(--color-ink) calc(100% - 36px), transparent);
+    -webkit-mask-image: linear-gradient(to right, transparent, var(--color-ink) 12px, var(--color-ink) calc(100% - 36px), transparent);
+  }
+  .snap-row-lg::-webkit-scrollbar {
+    display: none;
+  }
+  .snap-row-lg > .snap-item {
+    flex: 0 0 82%;
+    max-width: 320px;
+    scroll-snap-align: start;
+  }
+}
+@media (min-width: 640px) and (max-width: 1023px) {
+  .snap-row,
+  .snap-row-lg {
     scroll-padding-inline: 1.5rem;
   }
 }

@@ -220,7 +220,7 @@ export const ChaosPinned: React.FC = () => {
   return (
     <section ref={sectionRef} data-header="night" className="relative h-[240vh] bg-night">
       <div ref={stageRef} className="sticky top-16 h-[calc(100vh-4rem)] overflow-hidden max-w-[1440px] mx-auto">
-        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-night via-night/60 to-transparent z-10" />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-linear-to-b from-night via-night/60 to-transparent z-10" />
         <div className="absolute left-10 top-[9%] max-w-[480px] z-10">
           <div ref={aRef}>{copyA}</div>
           <div ref={bRef} className="absolute inset-x-0 top-0" style={{ opacity: 0 }}>

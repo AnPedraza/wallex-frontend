@@ -70,7 +70,7 @@ export const CityPinned: React.FC = () => {
         {/* Disolución suave del fondo hacia el inicio de la siguiente sección */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-surface via-surface/60 to-transparent transition-opacity duration-300"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-44 bg-linear-to-t from-surface via-surface/60 to-transparent transition-opacity duration-300"
           style={{ opacity: exit }}
         />
       </div>

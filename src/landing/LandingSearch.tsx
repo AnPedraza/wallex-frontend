@@ -59,7 +59,7 @@ export const LandingSearch: React.FC<LandingSearchProps> = ({ compact = false })
           className="folio-range mt-1"
           style={{ ['--fill' as string]: fill } as React.CSSProperties}
         />
-        <div className="flex items-center justify-between text-[11px] text-ink-faint mt-1.5 px-0.5">
+        <div className="flex items-center justify-between text-[12px] text-ink-faint mt-1.5 px-0.5">
           <span>{cop(RANGE_MIN)}</span>
           <span className="font-semibold text-ink-soft">
             {count === 0 ? 'Sin opciones en este rango' : `${count} ${count === 1 ? 'arriendo entra' : 'arriendos entran'}`}
