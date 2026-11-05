@@ -15,13 +15,14 @@ Plataforma web para buscar, comparar y contactar vivienda en Bogotá, con la ide
 4. Abrir la ficha estandarizada de un inmueble: canon, administración, total mensual, depósito y requisitos del arrendador.
 5. Ver en la ficha el sello del certificado de tradición y libertad, que indica si está verificado o pendiente de cotejo.
 6. Comparar hasta 3 inmuebles lado a lado con el costo total del mes, incluido el transporte.
-7. Contactar a quien publica, lo que abre la verificación de identidad (KYC) antes de compartir el contacto. En los arriendos publicados por personas reales, al final se ven su nombre y su celular, con botón de WhatsApp, solo si tienes cuenta.
-8. Publicar un arriendo con la ficha estándar (lo que se paga, lo que pides, cómo se llega y hasta 8 fotos) y verlo en el catálogo.
-9. En «Mis publicaciones», pausar, volver a publicar o borrar tus arriendos.
+7. Guardar los arriendos que te interesan, desde la tarjeta o desde la ficha, y verlos en «Guardados» con su total del mes. Pide cuenta: si no la tienes, la creas y el arriendo queda guardado.
+8. Contactar a quien publica, lo que abre la verificación de identidad (KYC) antes de compartir el contacto. En los arriendos publicados por personas reales, al final se ven su nombre y su celular, con botón de WhatsApp, solo si tienes cuenta.
+9. Publicar un arriendo con la ficha estándar (lo que se paga, lo que pides, cómo se llega y hasta 8 fotos) y verlo en el catálogo.
+10. En «Mis publicaciones», pausar, volver a publicar o borrar tus arriendos.
 
 ## Qué está simulado
 
-- **Cuentas sin Supabase:** si el proyecto no tiene las variables de Supabase (por ejemplo, en local sin `.env.local`), las cuentas se guardan solo en el `localStorage` del navegador, con el correo y un hash SHA-256 con sal, nunca la contraseña.
+- **Cuentas sin Supabase:** si el proyecto no tiene las variables de Supabase (por ejemplo, en local sin `.env.local`), las cuentas se guardan solo en el `localStorage` del navegador, con el correo y un hash SHA-256 con sal, nunca la contraseña. Lo guardado también queda en ese navegador.
 - **Verificación KYC:** es una simulación en dos pasos (lo que se pediría y la autorización de datos, y luego la confirmación). No se toma ninguna foto ni hay un proveedor de identidad detrás. La pantalla lo dice.
 - **Datos de contacto:** en los inmuebles de ejemplo, al terminar la verificación la pantalla explica que en la versión real ahí se vería el contacto. No se envía ningún correo.
 - **Lo publicado por personas reales** sale como «Sin verificar» mientras la verificación de identidad sea simulada.
@@ -69,14 +70,15 @@ Otros comandos:
 2. En «Buscar vivienda», filtra por zona y mueve el control del total del mes.
 3. Entra a «Ver ficha» de un inmueble y revisa lo que pagas cada mes y los requisitos.
 4. Marca «Comparar» en dos o tres tarjetas y abre el «Comparador lado a lado». Empieza vacío: solo muestra lo que eliges.
-5. Pulsa «Contactar» en la tarjeta (o «Contactar a quien publica» en la ficha o el comparador), marca la autorización y completa la verificación.
+5. Toca el marcador que está al lado de «Comparar» (o «Guardar» en la ficha) y abre «Guardados» en la barra.
+6. Pulsa «Contactar» en la tarjeta (o «Contactar a quien publica» en la ficha o el comparador), marca la autorización y completa la verificación.
 
 ## Estructura
 
 ```
 src/
-  App.tsx                    navegación por hash (#buscar, #comparar, #publicar, #mis-publicaciones, #privacidad), sesión y modales
-  lib/                       Supabase: accounts.ts (si hay variables), supabase.ts (el cliente), listings.ts (publicaciones) y photos.ts (fotos)
+  App.tsx                    navegación por hash (#buscar, #comparar, #guardados, #publicar, #mis-publicaciones, #privacidad), sesión y modales
+  lib/                       Supabase: accounts.ts (si hay variables), supabase.ts (el cliente), listings.ts (publicaciones), photos.ts (fotos) y favorites.ts (guardados)
   landing/                   página de inicio en /inicio
   components/
     AuthForm.tsx             registro e inicio de sesión (con AuthScreen, su pantalla)
@@ -85,6 +87,8 @@ src/
     PrivacyPolicy.tsx        política de tratamiento de datos (Ley 1581)
     Navbar.tsx, Footer.tsx   barra de navegación y pie de página
     PropertyPortal.tsx       catálogo con filtros
+    PropertyCard.tsx         tarjeta de un inmueble (catálogo y Guardados)
+    SavedProperties.tsx      guardados
     PropertyDetail.tsx       ficha estandarizada
     PropertyBadge.tsx        estado del certificado de tradición y libertad
     FolioSeal.tsx            roseta de verificación de cada inmueble
@@ -98,7 +102,7 @@ src/
 
 ## Tecnologías
 
-React 19, TypeScript, Vite y Tailwind CSS 4, con la tipografía Schibsted Grotesk servida desde el proyecto (licencia OFL en `src/assets/fonts/`). El sistema visual está documentado en `DESIGN.md` y el producto en `PRODUCT.md`. Cada push a `main` se despliega solo en Vercel. Las cuentas, las publicaciones y sus fotos usan Supabase (PostgreSQL con permisos por fila). La verificación de identidad con un proveedor externo queda para después.
+React 19, TypeScript, Vite y Tailwind CSS 4, con la tipografía Schibsted Grotesk servida desde el proyecto (licencia OFL en `src/assets/fonts/`). El sistema visual está documentado en `DESIGN.md` y el producto en `PRODUCT.md`. Cada push a `main` se despliega solo en Vercel. Las cuentas, las publicaciones, sus fotos y los guardados usan Supabase (PostgreSQL con permisos por fila). La verificación de identidad con un proveedor externo queda para después.
 
 ## Equipo
 

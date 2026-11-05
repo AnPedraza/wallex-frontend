@@ -227,7 +227,7 @@ Ritmo: múltiplos de 4 px. 16 px de relleno en tarjetas, 20 px en el panel de fi
 
 ## Elevation & Depth
 
-Sistema plano. Ninguna superficie lleva sombra: la profundidad viene del contraste entre el papel de fondo, la hoja blanca y el filete de 1 px. La única capa que flota es la barra del comparador, fija abajo, que se separa por color (tinta sobre la página) y un anillo blanco al 15 %.
+Sistema plano. Ninguna superficie lleva sombra: la profundidad viene del contraste entre el papel de fondo, la hoja blanca y el filete de 1 px. La única capa que flota es la barra del comparador, fija abajo, que se separa por color (tinta sobre la página) y un anillo blanco al 15 %. Los avisos cortos (`Notice`) usan el mismo estilo: «No pudimos guardar…» aparece arriba, bajo la barra y encima de la ficha, y se va a los 7 s; «Quitaste… de tus guardados» con «Deshacer» aparece abajo, encima de la barra del comparador si está.
 
 ### Named Rules
 **The Flat Paper Rule.** Las superficies son hojas sobre papel: borde fino, sin sombra, sin blur. Si algo necesita "levantarse", cambia de tinta, no de sombra.
@@ -249,7 +249,7 @@ Formas de documento: rectángulos con esquinas apenas redondeadas. 10 px en tarj
 - **Background:** hoja blanca sobre papel.
 - **Shadow Strategy:** ninguna (ver Elevation & Depth).
 - **Border:** filete de 1 px.
-- **Internal Padding:** 16 px. Orden fijo en todos los inmuebles: foto, título, metadatos, total del mes, desglose, requisitos, sello y acciones.
+- **Internal Padding:** 16 px. Orden fijo en todos los inmuebles: foto, título, metadatos, total del mes, desglose, requisitos, sello y acciones. La tarjeta es un solo componente (`PropertyCard`) para el catálogo y Guardados.
 
 ### Inputs / Fields
 - **Style:** fondo blanco, borde de 1 px en "borde de control", 8 px de radio y 10 × 12 px de relleno.
@@ -258,11 +258,14 @@ Formas de documento: rectángulos con esquinas apenas redondeadas. 10 px en tarj
 
 ### Navigation
 - Barra blanca de 68 px, fija arriba, con un filete abajo. El logo va de 40 px con "Wallex" en 800. Las pestañas van a 15 px: la activa en tinta y 600 con subrayado verde de 2 px, las demás en tinta suave. El contador de elementos en el comparador es una píldora en tinta. Por debajo de 1024 px pasa a menú de hamburguesa.
+- **Guardados** va a la derecha, junto a la cuenta, y no cuenta entre los tres enlaces: el marcador con su contador en píldora de tinta y, desde 1280 px, el texto «Guardados». Activo, lleva el mismo subrayado verde. En celular el marcador queda a la vista entre el nombre y el menú.
+- Si no cabe todo, se recorta el nombre de la persona con puntos suspensivos; los enlaces nunca se parten ni se desbordan.
 
 ### Pantalla de cuenta
 - "Ingresar" de la landing (`/#ingresar`) e "Ingresar / Crear cuenta" de la barra (`/#crear-cuenta`) abren una pantalla propia: el logo, "Volver" y el formulario centrado sobre papel, sin la barra, el pie ni el catálogo detrás.
 - Al entrar o crear la cuenta se vuelve a donde estaba la persona (el catálogo conserva sus filtros), y la pantalla de cuenta sale del historial: "atrás" no regresa al formulario. Con sesión iniciada, esa pantalla manda al catálogo.
 - Con cuentas de Supabase, el registro pide la casilla de autorización de la Ley 1581 con enlace a la política de datos (`/#privacidad`).
+- Si se llega por tocar «Guardar» sin sesión, una línea sobre el formulario dice qué arriendo se va a guardar. Al terminar queda guardado y la persona vuelve a donde estaba, con la ficha abierta si la tenía.
 
 ### Control deslizante del total del mes (signature)
 Un `input range` nativo con riel de 4 px (tinta hasta el valor, filete después) y perilla blanca de 26 px con borde en tinta y una mini roseta verde adentro. Encima lleva un histograma de barras en tinta con cuántos inmuebles hay en cada tramo de $ 250.000; las barras por encima del tope se apagan. Al arrastrar, la perilla gira un poco.
@@ -318,6 +321,17 @@ La regla que manda: la pantalla nunca afirma algo que el prototipo no hace.
 
 ### Comparar (toggle)
 Botón sobre la foto, arriba a la derecha. Lleva una casilla dibujada y el texto "Comparar". Activo, pasa a fondo tinta con "En comparador" y usa `aria-pressed`.
+
+### Guardar (toggle)
+- **En la tarjeta:** botón cuadrado de 32 px a la izquierda de «Comparar», con el marcador de trazo (`BookmarkIcon`). Guardado, pasa a fondo tinta con el marcador relleno. Nunca en rojo: el rojo es solo para «sin verificar».
+- **En la ficha:** bajo los metadatos, con texto, «Guardar» o «Guardado».
+- Los dos usan `aria-pressed`. Sin sesión llevan a crear la cuenta (ver Pantalla de cuenta).
+
+### Guardados
+- **Vista `#guardados`** con las mismas tarjetas del catálogo (`PropertyCard`), del último guardado al primero, y el mismo selector «Cómo te mueves», así el total coincide con el catálogo y la ficha. La grilla va a 4 columnas desde 1280 px, porque no tiene la columna de filtros.
+- **Sin sesión** pide crear la cuenta o entrar. **Vacía**, explica dónde está el marcador y lleva al catálogo.
+- **Quitar** saca la tarjeta al instante y deja «Deshacer» abajo.
+- **Si un arriendo guardado ya no está publicado** (lo pausaron o lo borraron), un aviso lo dice y ofrece quitarlo de la lista. Nunca desaparece sin explicación.
 
 ### Landing (/inicio)
 Página aparte de la app, con su propia entrada en Vite (`inicio/index.html`, código en `src/landing/`). Usa la misma ficha, los mismos datos de ejemplo y los mismos tokens; no inventa cifras.
