@@ -8,12 +8,13 @@ interface AuthScreenProps {
   initialRole?: Role; // "Crear cuenta para publicar" llega con "Quiero publicar" marcado
   onSuccess: (user: SessionUser) => void;
   onBack: () => void;
+  note?: React.ReactNode; // por qué se pide la cuenta, cuando se llega desde una acción (por ejemplo, guardar)
 }
 
 const focusRing = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink';
 
 // Pantalla propia para entrar o crear la cuenta: solo el formulario, sin el catálogo detrás
-export const AuthScreen: React.FC<AuthScreenProps> = ({ mode, initialRole, onSuccess, onBack }) => {
+export const AuthScreen: React.FC<AuthScreenProps> = ({ mode, initialRole, onSuccess, onBack, note }) => {
   const formRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -45,7 +46,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ mode, initialRole, onSuc
       </header>
 
       <div ref={formRef} className="flex-1 flex justify-center items-start sm:items-center px-4 pt-6 pb-16">
-        <AuthForm key={`${mode}-${initialRole ?? ''}`} initialMode={mode} initialRole={initialRole} onSuccess={onSuccess} />
+        <div className="w-full max-w-md">
+          {note && <p className="mb-3 text-sm text-ink-soft">{note}</p>}
+          <AuthForm key={`${mode}-${initialRole ?? ''}`} initialMode={mode} initialRole={initialRole} onSuccess={onSuccess} />
+        </div>
       </div>
     </div>
   );

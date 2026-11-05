@@ -23,11 +23,11 @@ const sections: { title: string; body: React.ReactNode }[] = [
   },
   {
     title: 'Qué guardamos',
-    body: 'Tu nombre, tu correo, tu contraseña y si buscas arriendo o publicas. Si publicas, también cómo publicas (propietario, inmobiliaria o arrendatario que cede el contrato), tu celular, los datos de tus arriendos y sus fotos. Si buscas, los arriendos que guardes como favoritos. La contraseña se guarda protegida: nadie del equipo la puede ver. No pedimos cédula, selfie ni datos de pago; la verificación de identidad que ves al contactar es simulada y no guarda nada.',
+    body: 'Tu nombre, tu correo, tu contraseña y si buscas arriendo o publicas. Si publicas, también cómo publicas (propietario, inmobiliaria o arrendatario que cede el contrato), tu celular, los datos de tus arriendos y sus fotos. Además, los arriendos que guardes para ver después. La contraseña se guarda protegida: nadie del equipo la puede ver. No pedimos cédula, selfie ni datos de pago; la verificación de identidad que ves al contactar es simulada y no guarda nada.',
   },
   {
     title: 'Quién ve qué',
-    body: 'Tus arriendos publicados y sus fotos los puede ver cualquiera. Tu nombre y tu celular de contacto solo los ven las personas con cuenta en Wallex, para escribirte por uno de tus arriendos. Tus favoritos y los demás datos de tu cuenta solo los ves tú.',
+    body: 'Tus arriendos publicados y sus fotos los puede ver cualquiera. Tu nombre y tu celular de contacto solo los ven las personas con cuenta en Wallex, para escribirte por uno de tus arriendos. Tus guardados y los demás datos de tu cuenta solo los ves tú.',
   },
   {
     title: 'Para qué los usamos',

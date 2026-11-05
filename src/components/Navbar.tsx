@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import logo from '../assets/wallex-logo.png';
+import { BookmarkIcon } from './BookmarkIcon';
 
 export interface NavLink {
   label: string;
@@ -12,6 +13,8 @@ interface NavbarProps {
   onLogout?: () => void;
   onLoginClick?: () => void;
   links?: NavLink[];
+  // Guardados: va junto a la cuenta, con el marcador y cuántos hay (si no llega, no se muestra)
+  saved?: { href: string; count: number };
 }
 
 // Secciones de la app
@@ -27,6 +30,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onLogout,
   onLoginClick,
   links = defaultLinks,
+  saved,
 }) => {
   const [hash, setHash] = useState(() => window.location.hash);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -45,7 +49,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, [menuOpen]);
 
   // Sin hash (o en el inicio) la sección activa es la primera
-  const activeHref = links.find((l) => l.href === hash)?.href ?? (hash ? undefined : links[0]?.href);
+  const hrefs = [...links.map((l) => l.href), ...(saved ? [saved.href] : [])];
+  const activeHref = hrefs.find((href) => href === hash) ?? (hash ? undefined : links[0]?.href);
+  const savedActive = saved !== undefined && saved.href === activeHref;
 
   // Pestaña activa: subrayado verde de verificación, como el sello del folio
   const linkClass = (href: string) =>
@@ -59,6 +65,16 @@ export const Navbar: React.FC<NavbarProps> = ({
       href === activeHref ? 'bg-paper text-ink font-semibold' : 'text-ink-soft hover:bg-paper'
     }`;
   const badgeClass = 'min-w-5 rounded-full bg-ink px-1.5 text-center text-xs font-semibold leading-5 text-white';
+  const savedBadge = saved && saved.count > 0 && <span className={badgeClass}>{saved.count}</span>;
+
+  // En escritorio dice "Guardados" desde 1280 px; entre 1024 y 1279 queda solo el marcador
+  const savedLink = saved && (
+    <a href={saved.href} aria-current={savedActive ? 'page' : undefined} className={linkClass(saved.href)}>
+      <BookmarkIcon className="size-[18px]" />
+      <span className="sr-only xl:not-sr-only">Guardados</span>
+      {savedBadge}
+    </a>
+  );
 
   const handleLogin = () => {
     setMenuOpen(false);
@@ -79,7 +95,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         </a>
 
         {/* Escritorio */}
-        <div className="hidden lg:flex flex-1 items-center gap-8 pl-6">
+        {/* min-w-0: si no cabe todo, se recorta el nombre y no se desborda la barra */}
+        <div className="hidden lg:flex flex-1 min-w-0 items-center gap-8 pl-6">
           <ul className="flex items-center gap-7">
             {links.map((link) => (
               <li key={link.href}>
@@ -95,48 +112,66 @@ export const Navbar: React.FC<NavbarProps> = ({
             ))}
           </ul>
 
-          {user ? (
-            <div className="ml-auto flex items-center gap-3">
-              <span className="text-sm text-ink-soft max-w-[16rem] truncate" title={user.email}>
-                {user.nombre || user.email}
-              </span>
+          <div className="ml-auto min-w-0 flex items-center gap-6">
+            {savedLink}
+            {user ? (
+              <div className="min-w-0 flex items-center gap-3">
+                <span className="text-sm text-ink-soft max-w-[16rem] truncate" title={user.email}>
+                  {user.nombre || user.email}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className={`shrink-0 px-4 py-2 rounded-lg text-sm font-semibold border border-control hover:bg-paper transition-colors ${focusRing}`}
+                >
+                  Salir
+                </button>
+              </div>
+            ) : (
               <button
                 type="button"
-                onClick={handleLogout}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold border border-control hover:bg-paper transition-colors ${focusRing}`}
+                onClick={handleLogin}
+                className={`shrink-0 px-[18px] py-2.5 rounded-lg text-sm font-semibold bg-ink text-white hover:bg-ink-hover transition-colors ${focusRing}`}
               >
-                Salir
+                Ingresar / Crear cuenta
               </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={handleLogin}
-              className={`ml-auto px-[18px] py-2.5 rounded-lg text-sm font-semibold bg-ink text-white hover:bg-ink-hover transition-colors ${focusRing}`}
-            >
-              Ingresar / Crear cuenta
-            </button>
-          )}
+            )}
+          </div>
         </div>
 
-        {/* Celular: con sesión, el correo queda a la vista junto al menú */}
-        {user && (
-          <span className="lg:hidden ml-auto -mr-3 min-w-0 max-w-[10rem] truncate text-[13px] text-ink-soft" title={user.email}>
-            {user.nombre || user.email}
-          </span>
-        )}
-        <button
-          type="button"
-          onClick={() => setMenuOpen((v) => !v)}
-          aria-expanded={menuOpen}
-          aria-controls="menu-movil"
-          aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
-          className={`lg:hidden size-11 flex items-center justify-center rounded-lg hover:bg-paper ${focusRing}`}
-        >
-          <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-            {menuOpen ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
-          </svg>
-        </button>
+        {/* Celular: con sesión, el nombre queda a la vista; los guardados y el menú, al lado */}
+        <div className="lg:hidden ml-auto min-w-0 flex items-center gap-1">
+          {user && (
+            <span className="min-w-0 max-w-[10rem] truncate text-[13px] text-ink-soft mr-1" title={user.email}>
+              {user.nombre || user.email}
+            </span>
+          )}
+          {saved && (
+            <a
+              href={saved.href}
+              aria-current={savedActive ? 'page' : undefined}
+              className={`shrink-0 h-11 min-w-11 px-2 flex items-center justify-center gap-1 rounded-lg ${
+                savedActive ? 'bg-paper text-ink' : 'text-ink-soft hover:bg-paper'
+              } ${focusRing}`}
+            >
+              <BookmarkIcon className="size-[22px]" />
+              <span className="sr-only">Guardados</span>
+              {savedBadge}
+            </a>
+          )}
+          <button
+            type="button"
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-expanded={menuOpen}
+            aria-controls="menu-movil"
+            aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
+            className={`shrink-0 size-11 flex items-center justify-center rounded-lg hover:bg-paper ${focusRing}`}
+          >
+            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              {menuOpen ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+            </svg>
+          </button>
+        </div>
       </nav>
 
       {menuOpen && (

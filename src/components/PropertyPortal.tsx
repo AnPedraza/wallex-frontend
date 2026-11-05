@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import type { Property } from '../types/property';
 import { INITIAL_PROPERTIES, TRANSPORT_PROFILES, calculateTotalMonthlyCost, formatCOP } from '../data/mockProperties';
 import { PropertyDetail } from './PropertyDetail';
-import { VerificationStamp, type SealStatus } from './FolioSeal';
+import { PropertyCard } from './PropertyCard';
+import { CompareBar } from './CompareBar';
 import type { Property as DetailProperty } from '../data/properties';
-import { sampleFolio } from '../data/folio';
+import { folioOf, toDetail } from '../data/detail';
 import { TRANSPORT_LABELS } from '../data/transportLabels';
 
 interface PropertyPortalProps {
@@ -17,6 +18,11 @@ interface PropertyPortalProps {
   onTransportProfileChange?: (id: string) => void;
   // Los inmuebles del catálogo: los publicados en Wallex y los de ejemplo (si no llega, solo los de ejemplo)
   properties?: Property[];
+  // Guardados de la persona (si no llega onToggleSaved, no se muestra el botón de guardar)
+  savedIds?: string[];
+  onToggleSaved?: (property: Property) => void;
+  // false mientras se ve otra vista: la ficha abierta se esconde y vuelve a aparecer al regresar
+  active?: boolean;
 }
 
 type SortKey = 'total-asc' | 'total-desc' | 'area-desc';
@@ -26,8 +32,6 @@ const RANGE_MAX = 3_500_000;
 const RANGE_STEP = 50_000;
 const DEFAULT_MAX = 3_000_000;
 const BIN_SIZE = 250_000;
-
-const num = (value: number) => value.toLocaleString('es-CO');
 
 // Filtros que llegan desde la landing (/?zona=...&max=...); si no sirven, se usan los de siempre
 const initialFilters = () => {
@@ -50,39 +54,6 @@ const clearFichaFromUrl = () => {
   window.history.replaceState(null, '', url.pathname + url.search + url.hash);
 };
 
-const sealStatus = (p: Property): SealStatus => (!p.verified ? 'unverified' : p.certified ? 'verified' : 'pending');
-
-const folioOf = (p: Property) => sampleFolio(p.id, p.title, p.zone);
-
-const toDetail = (property: Property): DetailProperty => ({
-  ...property,
-  images: property.images ?? [property.image],
-  description: property.description ?? `${property.title} ubicado en ${property.location}. ${property.transitAccess}.`,
-  requiresCoSigner: property.requirements.guarantorRequired,
-  requirements: [
-    {
-      label: property.requirements.guarantorRequired ? 'Codeudor con finca raíz en Bogotá' : 'Sin codeudor con finca raíz',
-      required: property.requirements.guarantorRequired,
-      detail: property.requirements.notes,
-    },
-    property.requirements.minIncomeMultiplier > 0
-      ? { label: `Demostración de ingresos de ${property.requirements.minIncomeMultiplier}x el valor de arriendo`, required: true }
-      : { label: 'Sin demostración de ingresos', required: false },
-  ],
-});
-
-// Cada dato se mantiene completo en una línea; los cortes caen entre datos
-const Segments: React.FC<{ items: string[]; joiner: string }> = ({ items, joiner }) => (
-  <>
-    {items.map((item, k) => (
-      <React.Fragment key={item}>
-        {k > 0 && joiner}
-        <span className="whitespace-nowrap">{item}</span>
-      </React.Fragment>
-    ))}
-  </>
-);
-
 const fieldClass =
   'w-full bg-surface border border-control rounded-lg px-3 py-2.5 text-sm text-ink focus-visible:outline-2 focus-visible:outline-ink';
 
@@ -94,6 +65,9 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
   transportProfileId,
   onTransportProfileChange,
   properties = INITIAL_PROPERTIES,
+  savedIds = [],
+  onToggleSaved,
+  active = true,
 }) => {
   const [zone, setZone] = useState(() => initialFilters().zone);
   const [maxTotal, setMaxTotal] = useState(() => initialFilters().maxTotal);
@@ -121,18 +95,6 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
     setDetail(null);
     clearFichaFromUrl();
   };
-  const [overFooter, setOverFooter] = useState(false);
-
-  // La barra del comparador se invierte cuando pasa sobre el pie de página (mismo color tinta)
-  useEffect(() => {
-    const footer = document.querySelector('footer');
-    if (!footer || !('IntersectionObserver' in window)) return;
-    const observer = new IntersectionObserver(([entry]) => setOverFooter(entry.isIntersecting), {
-      rootMargin: '0px 0px -16px 0px',
-    });
-    observer.observe(footer);
-    return () => observer.disconnect();
-  }, []);
 
   const multiplier = TRANSPORT_PROFILES.find((t) => t.id === transportId)?.multiplier ?? 1;
   const zones = useMemo(() => Array.from(new Set(properties.map((p) => p.zone))).sort((a, b) => a.localeCompare(b, 'es')), [properties]);
@@ -194,6 +156,8 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
     const matched = properties.find((p) => p.id === property.id);
     if (matched) handleContact(matched);
   };
+
+  const detailSource = detail ? properties.find((p) => p.id === detail.property.id) : undefined;
 
   const checkbox = (id: string, label: string, checked: boolean, onChange: (v: boolean) => void) => (
     <label htmlFor={id} className="flex items-center gap-2.5 py-1 text-sm cursor-pointer">
@@ -379,135 +343,38 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
             </div>
           ) : (
             <ul className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-              {results.map(({ property, transport, total }) => {
-                const inCompare = comparisonIds.includes(property.id);
-                const status = sealStatus(property);
-                const req = property.requirements;
-                const openDetail = () =>
-                  setDetail({ property: toDetail(property), transport, folio: property.verified ? folioOf(property) : null });
-
-                return (
-                  <li key={property.id} className="bg-surface border border-rule rounded-[10px] overflow-hidden flex flex-col">
-                    <div className="relative aspect-[16/10] bg-rule">
-                      <img src={property.image} alt="" className="absolute inset-0 size-full object-cover" loading="lazy" />
-                      {onToggleComparison && (
-                        <button
-                          type="button"
-                          onClick={() => onToggleComparison(property.id)}
-                          aria-pressed={inCompare}
-                          aria-label={`${inCompare ? 'Quitar del comparador' : 'Agregar al comparador'}: ${property.title}`}
-                          className={`absolute top-2.5 right-2.5 flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[13px] font-semibold transition-colors ${
-                            inCompare ? 'bg-ink text-white' : 'bg-surface text-ink hover:bg-paper'
-                          }`}
-                        >
-                          <span
-                            aria-hidden="true"
-                            className={`size-[15px] rounded-[3px] border-[1.5px] flex items-center justify-center ${
-                              inCompare ? 'border-white bg-white' : 'border-ink'
-                            }`}
-                          >
-                            {inCompare && (
-                              <svg viewBox="0 0 12 12" className="size-2.5" fill="none" stroke="var(--color-ink)" strokeWidth="2">
-                                <path d="M2.5 6.2l2.3 2.3 4.7-5" />
-                              </svg>
-                            )}
-                          </span>
-                          {inCompare ? 'En comparador' : 'Comparar'}
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="px-4 pt-3.5 pb-3 flex-1">
-                      <h3 className="text-[17px] font-bold tracking-[-0.01em] leading-snug">
-                        <button type="button" onClick={openDetail} className="text-left hover:underline">
-                          {property.title}
-                        </button>
-                      </h3>
-                      <p className="text-[13px] text-ink-soft mt-1">
-                        {property.area} m² · {property.bedrooms} hab · {property.bathrooms} {property.bathrooms === 1 ? 'baño' : 'baños'} ·{' '}
-                        {property.location.replace(', Bogotá', '')}
-                      </p>
-                      <p className="mt-3 flex items-baseline gap-1.5">
-                        <strong className="text-[28px] font-extrabold tracking-[-0.02em] leading-none">{formatCOP(total)}</strong>
-                        <span className="text-[13px] text-ink-soft">al mes</span>
-                      </p>
-                      <p className="text-[12.5px] text-ink-soft mt-1.5">
-                        <Segments items={[`Canon ${num(property.price)}`, `admin ${num(property.adminFee)}`, `transporte ${num(transport)}`]} joiner=" + " />
-                      </p>
-                      <p className="text-[13px] mt-2.5">
-                        <Segments
-                          items={[
-                            req.guarantorRequired ? 'Pide codeudor' : 'Sin codeudor',
-                            `depósito ${formatCOP(property.deposit)}`,
-                            `mascotas ${req.petsAllowed ? 'sí' : 'no'}`,
-                          ]}
-                          joiner=" · "
-                        />
-                      </p>
-                    </div>
-
-                    <div className="px-4 py-2.5 border-t border-rule">
-                      <VerificationStamp seed={property.id} status={status} folio={property.verified ? folioOf(property) : null} />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 px-4 pb-4">
-                      <button
-                        type="button"
-                        onClick={openDetail}
-                        className="border border-ink rounded-lg py-2 text-sm font-semibold hover:bg-paper"
-                      >
-                        Ver ficha
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleContact(property)}
-                        className="bg-ink text-white rounded-lg py-2 text-sm font-semibold hover:bg-ink-hover"
-                      >
-                        Contactar
-                      </button>
-                    </div>
-                  </li>
-                );
-              })}
+              {results.map(({ property, transport, total }) => (
+                <PropertyCard
+                  key={property.id}
+                  property={property}
+                  transport={transport}
+                  total={total}
+                  onOpenDetail={() =>
+                    setDetail({ property: toDetail(property), transport, folio: property.verified ? folioOf(property) : null })
+                  }
+                  onContact={() => handleContact(property)}
+                  inCompare={comparisonIds.includes(property.id)}
+                  onToggleComparison={onToggleComparison && (() => onToggleComparison(property.id))}
+                  saved={savedIds.includes(property.id)}
+                  onToggleSaved={onToggleSaved && (() => onToggleSaved(property))}
+                />
+              ))}
             </ul>
           )}
         </section>
       </div>
 
-      {/* Barra del comparador */}
-      {comparisonIds.length > 0 && onOpenComparer && (
-        <div className="fixed bottom-4 inset-x-0 z-30 px-4 flex justify-center pointer-events-none">
-          <div
-            className={`pointer-events-auto rounded-[10px] pl-5 pr-2 py-2 flex items-center gap-5 ring-1 transition-colors duration-200 ${
-              overFooter ? 'bg-surface text-ink ring-rule' : 'bg-ink text-white ring-white/15'
-            }`}
-          >
-            <p className="text-sm">
-              <b>
-                {comparisonIds.length} de 3
-              </b>{' '}
-              para comparar<span className="hidden sm:inline"> lado a lado</span>
-            </p>
-            <button
-              type="button"
-              onClick={onOpenComparer}
-              className={`font-semibold text-sm px-4 py-2 rounded-lg transition-colors duration-200 ${
-                overFooter ? 'bg-ink text-white hover:bg-ink-hover' : 'bg-surface text-ink hover:bg-paper focus-visible:outline-white'
-              }`}
-            >
-              Abrir comparador
-            </button>
-          </div>
-        </div>
-      )}
+      {comparisonIds.length > 0 && onOpenComparer && <CompareBar count={comparisonIds.length} onOpen={onOpenComparer} />}
 
-      {detail && (
+      {detail && active && (
         <PropertyDetail
           property={detail.property}
           transport={{ amount: detail.transport, label: TRANSPORT_LABELS[transportId] ?? 'Transporte estimado' }}
           folio={detail.folio}
           onClose={closeDetail}
           onContact={handleContactFromDetail}
+          saved={savedIds.includes(detail.property.id)}
+          onToggleSaved={onToggleSaved && detailSource && (() => onToggleSaved(detailSource))}
         />
       )}
 

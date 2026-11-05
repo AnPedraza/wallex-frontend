@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { monthlyTotal, type Property } from '../data/properties';
 import { PropertyBadge } from './PropertyBadge';
 import { FolioSeal, type SealStatus } from './FolioSeal';
+import { BookmarkIcon } from './BookmarkIcon';
 
 interface PropertyDetailProps {
   property: Property;
@@ -10,6 +11,9 @@ interface PropertyDetailProps {
   // Transporte estimado con el perfil elegido en los filtros; así el total coincide con la tarjeta
   transport?: { amount: number; label: string };
   folio?: string | null;
+  // Guardar el arriendo (si no llega onToggleSaved, no se muestra el botón)
+  saved?: boolean;
+  onToggleSaved?: () => void;
 }
 
 const cop = (value: number) => `$ ${value.toLocaleString('es-CO')}`;
@@ -22,7 +26,15 @@ const Chevron: React.FC<{ dir: 'left' | 'right' }> = ({ dir }) => (
   </svg>
 );
 
-export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, onClose, onContact, transport, folio = null }) => {
+export const PropertyDetail: React.FC<PropertyDetailProps> = ({
+  property,
+  onClose,
+  onContact,
+  transport,
+  folio = null,
+  saved = false,
+  onToggleSaved,
+}) => {
   const [current, setCurrent] = useState(0);
   const closeRef = useRef<HTMLButtonElement>(null);
   const touchStartX = useRef<number | null>(null);
@@ -154,6 +166,19 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, onClos
                 {property.area} m² · {property.bedrooms} {property.bedrooms === 1 ? 'habitación' : 'habitaciones'} · {property.bathrooms}{' '}
                 {property.bathrooms === 1 ? 'baño' : 'baños'}
               </p>
+              {onToggleSaved && (
+                <button
+                  type="button"
+                  onClick={onToggleSaved}
+                  aria-pressed={saved}
+                  className={`mt-4 inline-flex items-center gap-2 rounded-lg border border-ink px-3.5 py-2 text-sm font-semibold transition-colors ${
+                    saved ? 'bg-ink text-white hover:bg-ink-hover' : 'text-ink hover:bg-paper'
+                  }`}
+                >
+                  <BookmarkIcon filled={saved} />
+                  {saved ? 'Guardado' : 'Guardar'}
+                </button>
+              )}
             </header>
 
             <section aria-label="Verificación" className="flex items-center gap-4 border-y border-rule py-4">

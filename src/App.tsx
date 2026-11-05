@@ -6,12 +6,15 @@ import { Footer } from './components/Footer';
 import { MyListings } from './components/MyListings';
 import { Navbar } from './components/Navbar';
 import type { NavLink } from './components/Navbar';
+import { Notice } from './components/Notice';
 import { PrivacyPolicy } from './components/PrivacyPolicy';
 import { PropertyPortal } from './components/PropertyPortal';
 import { PropertyComparer } from './components/PropertyComparer';
 import { PublishForm } from './components/PublishForm';
+import { SavedProperties, type SavedStatus } from './components/SavedProperties';
 import { INITIAL_PROPERTIES } from './data/mockProperties';
 import { serverAccounts, userFromMetadata } from './lib/accounts';
+import { addFavorite, fetchFavorites, removeFavorites } from './lib/favorites';
 import { fetchPublished } from './lib/listings';
 import { supabase } from './lib/supabase';
 import type { Role, SessionUser } from './types/account';
@@ -38,7 +41,7 @@ const compareFromLanding = (): string[] => {
 };
 
 // Cada vista vive en el hash. #ingresar y #crear-cuenta son la pantalla de cuenta, sin el catálogo detrás.
-type View = 'buscar' | 'comparar' | 'privacidad' | 'ingresar' | 'crear-cuenta' | 'publicar' | 'mis-publicaciones';
+type View = 'buscar' | 'comparar' | 'privacidad' | 'ingresar' | 'crear-cuenta' | 'publicar' | 'mis-publicaciones' | 'guardados';
 const VIEWS: Record<string, View> = {
   '#comparar': 'comparar',
   '#privacidad': 'privacidad',
@@ -46,20 +49,26 @@ const VIEWS: Record<string, View> = {
   '#crear-cuenta': 'crear-cuenta',
   '#publicar': 'publicar',
   '#mis-publicaciones': 'mis-publicaciones',
+  '#guardados': 'guardados',
 };
 const viewOf = (hash: string): View => VIEWS[hash] ?? 'buscar';
 const isAuthView = (v: View) => v === 'ingresar' || v === 'crear-cuenta';
 
-// Publicar y Mis publicaciones piden cuenta: sin sesión se ofrece crearla o entrar
-const NeedsAccount: React.FC<{ onCreate: () => void; onLogin: () => void }> = ({ onCreate, onLogin }) => (
+// Publicar, Mis publicaciones y Guardados piden cuenta: sin sesión se ofrece crearla o entrar
+interface NeedsAccountProps {
+  title: string;
+  text: string;
+  createLabel: string;
+  onCreate: () => void;
+  onLogin: () => void;
+}
+const NeedsAccount: React.FC<NeedsAccountProps> = ({ title, text, createLabel, onCreate, onLogin }) => (
   <section className="max-w-[640px] mx-auto px-4 sm:px-6 py-16 lg:py-24 text-center">
-    <h1 className="text-[2rem] lg:text-[2.75rem] leading-[1.08] font-extrabold tracking-[-0.03em]">Para publicar necesitas una cuenta</h1>
-    <p className="mt-4 text-[15px] text-ink-soft leading-relaxed">
-      Así quien busca sabe quién publica y te puede escribir. Crearla toma menos de un minuto.
-    </p>
+    <h1 className="text-[2rem] lg:text-[2.75rem] leading-[1.08] font-extrabold tracking-[-0.03em]">{title}</h1>
+    <p className="mt-4 text-[15px] text-ink-soft leading-relaxed">{text}</p>
     <div className="mt-8 flex flex-col sm:flex-row gap-2.5 justify-center">
       <button type="button" onClick={onCreate} className="bg-ink text-white font-semibold text-sm px-5 py-3 rounded-lg hover:bg-ink-hover">
-        Crear cuenta para publicar
+        {createLabel}
       </button>
       <button type="button" onClick={onLogin} className="border border-control font-semibold text-sm px-5 py-3 rounded-lg hover:bg-surface">
         Ya tengo cuenta
@@ -72,6 +81,9 @@ const NeedsAccount: React.FC<{ onCreate: () => void; onLogin: () => void }> = ({
 const leaveAuthIfOpen = () => {
   if (isAuthView(viewOf(window.location.hash))) window.location.replace('#buscar');
 };
+
+// Lo guardado por la persona con sesión. El correo dice de quién es: así nunca se ve lo de otra cuenta.
+type Saved = { email: string; ids: string[]; status: 'listo' | 'error' };
 
 export default function App() {
   const [user, setUser] = useState<SessionUser | null>(() => (supabase ? null : readSession()));
@@ -87,11 +99,62 @@ export default function App() {
   const [authRole, setAuthRole] = useState<Role | undefined>(undefined);
   // Lo que publica la gente en Wallex; va antes de los inmuebles de ejemplo
   const [published, setPublished] = useState<Property[]>([]);
+  const [publishedStatus, setPublishedStatus] = useState<'cargando' | 'listo' | 'error'>('cargando');
   const refreshPublished = useCallback(() => {
-    void fetchPublished().then(setPublished);
+    void fetchPublished()
+      .then((list) => {
+        setPublished(list);
+        setPublishedStatus('listo');
+      })
+      .catch(() => setPublishedStatus('error'));
   }, []);
   useEffect(refreshPublished, [refreshPublished]);
   const allProperties = useMemo(() => [...published, ...INITIAL_PROPERTIES], [published]);
+
+  // Avisos cortos (por ejemplo, si no se pudo guardar un cambio); se van solos
+  const [notice, setNotice] = useState<string | null>(null);
+  useEffect(() => {
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(null), 7000);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+
+  // Guardados. Si alguien sin sesión toca "Guardar", el arriendo espera aquí y se guarda apenas entra o crea la cuenta.
+  const [saved, setSaved] = useState<Saved | null>(null);
+  const pendingSave = useRef<string | null>(null);
+  const [saveIntent, setSaveIntent] = useState<string | null>(null); // título, para explicarlo en la pantalla de cuenta
+  const savedRequest = useRef(0);
+  const loadSaved = useCallback((email: string) => {
+    const request = ++savedRequest.current;
+    const pending = pendingSave.current;
+    pendingSave.current = null;
+    const first = pending
+      ? addFavorite(email, pending).catch(() => setNotice('No pudimos guardar el arriendo. Tócalo otra vez para intentarlo de nuevo.'))
+      : Promise.resolve();
+    return first
+      .then(() => fetchFavorites(email))
+      .then((ids) => {
+        if (request === savedRequest.current) setSaved({ email, ids, status: 'listo' });
+      })
+      .catch(() => {
+        if (request === savedRequest.current) setSaved({ email, ids: [], status: 'error' });
+      });
+  }, []);
+  const userEmail = user?.email;
+  useEffect(() => {
+    if (userEmail) void loadSaved(userEmail);
+  }, [userEmail, loadSaved]);
+
+  const mine = user && saved?.email === user.email ? saved : null;
+  const savedIds = useMemo(() => mine?.ids ?? [], [mine]);
+  // Solo se muestra lo guardado que sigue publicado; lo demás se cuenta aparte
+  const savedProperties = useMemo(
+    () => savedIds.map((id) => allProperties.find((p) => p.id === id)).filter((p): p is Property => p !== undefined),
+    [savedIds, allProperties]
+  );
+  const missingIds =
+    publishedStatus === 'listo' ? savedIds.filter((id) => !allProperties.some((p) => p.id === id)) : [];
+  const savedStatus: SavedStatus = !mine || publishedStatus === 'cargando' ? 'cargando' : mine.status;
 
   // Quitar ?ingresar y ?comparar de la dirección para que al recargar no se vuelvan a aplicar
   useEffect(() => {
@@ -144,29 +207,82 @@ export default function App() {
   }, [view]);
 
   const openedInApp = useRef(false);
-  const goToAuth = (screen: '#crear-cuenta' | '#ingresar', back: string, role?: Role) => {
+  // La vista a la que se vuelve después de la pantalla de cuenta
+  const here = isAuthView(view) || view === 'privacidad' ? '#buscar' : `#${view}`;
+  const goToAuth = (screen: '#crear-cuenta' | '#ingresar', back: string, options: { role?: Role; save?: Property } = {}) => {
     returnTo.current = back;
-    setAuthRole(role);
+    setAuthRole(options.role);
+    pendingSave.current = options.save?.id ?? null;
+    setSaveIntent(options.save?.title ?? null);
     openedInApp.current = true;
     window.location.hash = screen;
   };
-  const openAuth = () => goToAuth('#crear-cuenta', view === 'comparar' ? '#comparar' : '#buscar');
+  const openAuth = () => goToAuth('#crear-cuenta', here);
 
   // Al terminar, se reemplaza la pantalla de cuenta en el historial: "atrás" no vuelve al formulario.
-  // Quien acaba de crear su cuenta para publicar llega directo al formulario de publicar.
+  // Quien acaba de crear su cuenta para publicar llega directo al formulario de publicar,
+  // salvo que haya llegado a la pantalla de cuenta por guardar un arriendo.
   const handleAuthSuccess = (u: SessionUser) => {
     setUser(u);
     openedInApp.current = false;
-    const newPublisher = view === 'crear-cuenta' && u.rol === 'publica' && returnTo.current === '#buscar';
+    const newPublisher = view === 'crear-cuenta' && u.rol === 'publica' && returnTo.current === '#buscar' && !saveIntent;
+    setSaveIntent(null);
     window.location.replace(newPublisher ? '#publicar' : returnTo.current);
   };
 
   // "Volver" regresa a la página anterior si era de Wallex (el catálogo o la landing); si no, al catálogo
   const leaveAuth = () => {
+    pendingSave.current = null;
+    setSaveIntent(null);
     const fromWallex = openedInApp.current || document.referrer.startsWith(window.location.origin);
     openedInApp.current = false;
     if (fromWallex && window.history.length > 1) window.history.back();
     else window.location.replace(returnTo.current);
+  };
+
+  // Guardar o quitar. Se ve al instante; si la base de datos no recibe el cambio, se deshace y se avisa.
+  const toggleSaved = (property: Property) => {
+    if (!user) {
+      goToAuth('#crear-cuenta', here, { save: property });
+      return;
+    }
+    if (!mine) {
+      setNotice('Todavía estamos trayendo tus guardados. Inténtalo en un momento.');
+      return;
+    }
+    const { email } = user;
+    const wasSaved = mine.ids.includes(property.id);
+    const drop = (ids: string[]) => ids.filter((id) => id !== property.id);
+    const add = (ids: string[]) => [property.id, ...drop(ids)];
+    const update = (change: (ids: string[]) => string[]) =>
+      setSaved((prev) => (prev && prev.email === email ? { ...prev, ids: change(prev.ids) } : prev));
+    update(wasSaved ? drop : add);
+    (wasSaved ? removeFavorites(email, [property.id]) : addFavorite(email, property.id)).catch(() => {
+      update(wasSaved ? add : drop);
+      setNotice(
+        wasSaved
+          ? 'No pudimos quitarlo de tus guardados. Revisa tu conexión e inténtalo de nuevo.'
+          : 'No pudimos guardar el arriendo. Revisa tu conexión e inténtalo de nuevo.'
+      );
+    });
+  };
+
+  // Quita de la lista lo guardado que ya no está publicado
+  const forgetMissing = () => {
+    if (!user || missingIds.length === 0) return;
+    const { email } = user;
+    const gone = missingIds;
+    setSaved((prev) => (prev && prev.email === email ? { ...prev, ids: prev.ids.filter((id) => !gone.includes(id)) } : prev));
+    removeFavorites(email, gone).catch(() => {
+      setNotice('No pudimos limpiar la lista. Revisa tu conexión e inténtalo de nuevo.');
+      void loadSaved(email);
+    });
+  };
+
+  const retrySaved = () => {
+    if (!user) return;
+    setSaved(null);
+    void loadSaved(user.email);
   };
 
   const handleLogout = () => {
@@ -238,20 +354,70 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-paper">
-      {!authView && <Navbar user={user} onLogout={handleLogout} onLoginClick={openAuth} links={navLinks} />}
+      {!authView && (
+        <Navbar
+          user={user}
+          onLogout={handleLogout}
+          onLoginClick={openAuth}
+          links={navLinks}
+          saved={{ href: '#guardados', count: savedProperties.length }}
+        />
+      )}
 
       <main className="flex-1">
         {authView && (
-          <AuthScreen mode={view === 'ingresar' ? 'login' : 'register'} initialRole={authRole} onSuccess={handleAuthSuccess} onBack={leaveAuth} />
+          <AuthScreen
+            mode={view === 'ingresar' ? 'login' : 'register'}
+            initialRole={authRole}
+            onSuccess={handleAuthSuccess}
+            onBack={leaveAuth}
+            note={
+              saveIntent && (
+                <>
+                  Para guardar <b className="font-semibold text-ink">{saveIntent}</b> necesitas una cuenta. Al terminar, queda en tus guardados.
+                </>
+              )
+            }
+          />
         )}
         {(view === 'publicar' || view === 'mis-publicaciones') && !user && (
           <NeedsAccount
-            onCreate={() => goToAuth('#crear-cuenta', currentHash, 'publica')}
-            onLogin={() => goToAuth('#ingresar', currentHash)}
+            title="Para publicar necesitas una cuenta"
+            text="Así quien busca sabe quién publica y te puede escribir. Crearla toma menos de un minuto."
+            createLabel="Crear cuenta para publicar"
+            onCreate={() => goToAuth('#crear-cuenta', here, { role: 'publica' })}
+            onLogin={() => goToAuth('#ingresar', here)}
+          />
+        )}
+        {view === 'guardados' && !user && (
+          <NeedsAccount
+            title="Para guardar arriendos necesitas una cuenta"
+            text="Así los encuentras aquí cuando vuelvas, con su total del mes y sus requisitos. Crearla toma menos de un minuto."
+            createLabel="Crear cuenta"
+            onCreate={() => goToAuth('#crear-cuenta', here)}
+            onLogin={() => goToAuth('#ingresar', here)}
           />
         )}
         {view === 'publicar' && user && <PublishForm user={user} onPublished={refreshPublished} />}
         {view === 'mis-publicaciones' && user && <MyListings onChanged={refreshPublished} />}
+        {view === 'guardados' && user && (
+          <SavedProperties
+            properties={savedProperties}
+            status={savedStatus}
+            missing={missingIds.length}
+            onRetry={retrySaved}
+            onToggleSaved={toggleSaved}
+            onForgetMissing={forgetMissing}
+            comparisonIds={comparisonIds}
+            onToggleComparison={handleToggleComparison}
+            onOpenComparer={() => {
+              window.location.hash = '#comparar';
+            }}
+            onContactProperty={(prop) => setContactingProperty(prop)}
+            transportProfileId={transportProfileId}
+            onTransportProfileChange={setTransportProfileId}
+          />
+        )}
         {/* El catálogo sigue montado mientras se ve otra vista: al volver conserva sus filtros */}
         {view === 'comparar' && (
           <PropertyComparer
@@ -280,6 +446,9 @@ export default function App() {
             }}
             onContactProperty={(prop) => setContactingProperty(prop)}
             properties={allProperties}
+            savedIds={savedIds}
+            onToggleSaved={toggleSaved}
+            active={view === 'buscar'}
           />
         </div>
       </main>
@@ -294,10 +463,15 @@ export default function App() {
           signedIn={Boolean(user)}
           onSignIn={() => {
             setContactingProperty(null);
-            goToAuth('#ingresar', view === 'comparar' ? '#comparar' : '#buscar');
+            goToAuth('#ingresar', here);
           }}
         />
       )}
+
+      {/* Región viva fija, encima de la ficha: el aviso se anuncia apenas aparece */}
+      <div role="alert" className="fixed top-[76px] inset-x-0 z-[60] px-4 flex justify-center pointer-events-none">
+        {notice && <Notice onClose={() => setNotice(null)}>{notice}</Notice>}
+      </div>
     </div>
   );
 }

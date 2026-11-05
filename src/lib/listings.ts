@@ -106,6 +106,7 @@ export const toProperty = (row: ListingRow): Property => ({
   },
 });
 
+// Si falla, quien llama decide: el catálogo sigue con los de ejemplo y Guardados no da por perdido nada
 export const fetchPublished = async (): Promise<Property[]> => {
   if (!supabase) return [];
   const { data, error } = await supabase
@@ -114,8 +115,8 @@ export const fetchPublished = async (): Promise<Property[]> => {
     .eq('estado', 'publicado')
     .order('creado', { ascending: false })
     .limit(200);
-  if (error || !data) return [];
-  return (data as unknown as ListingRow[]).map(toProperty);
+  if (error) throw error;
+  return ((data ?? []) as unknown as ListingRow[]).map(toProperty);
 };
 
 export const fetchMine = async (userId: string): Promise<ListingRow[]> => {
