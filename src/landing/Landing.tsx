@@ -553,6 +553,8 @@ const Screens: React.FC<{ still: boolean }> = ({ still }) => {
   const [choice, setChoice] = useState<VideoChoice>('auto');
   const allowed = useAutoplayAllowed();
   const running = choice === 'play' || (choice === 'auto' && allowed);
+  // En celular el portátil no se muestra: sin montar su video, el celular no lo descarga
+  const wide = useMediaQuery('(min-width: 768px)');
   const near = still ? 1 : easeOut(segment(p, 0.05, 0.5));
   const rise = still ? 1 : easeOut(segment(p, 0.15, 0.6));
 
@@ -567,15 +569,17 @@ const Screens: React.FC<{ still: boolean }> = ({ still }) => {
           <figure className="hidden md:block origin-bottom" style={{ transform: `scale(${0.92 + 0.08 * near})` }}>
             <div className="relative bg-night rounded-t-[18px] px-3 pt-5 pb-3 lg:px-4 lg:pt-6 lg:pb-4">
               <span aria-hidden="true" className="absolute top-2 lg:top-2.5 left-1/2 -translate-x-1/2 size-1.5 rounded-full bg-white/25" />
-              <LoopVideo
-                src={clipDesktop}
-                poster={posterDesktop}
-                width={1280}
-                height={800}
-                className="rounded-[3px]"
-                choice={choice}
-                label="Recorrido por Wallex en la web: filtrar por zona y total del mes, abrir una ficha y comparar opciones"
-              />
+              {wide && (
+                <LoopVideo
+                  src={clipDesktop}
+                  poster={posterDesktop}
+                  width={1280}
+                  height={800}
+                  className="rounded-[3px]"
+                  choice={choice}
+                  label="Recorrido por Wallex en la web: filtrar por zona y total del mes, abrir una ficha y comparar opciones"
+                />
+              )}
             </div>
             <div aria-hidden="true" className="relative -mx-[3%] h-3.5 lg:h-4 bg-rule rounded-b-[14px] border-b border-control/50">
               <span className="absolute left-1/2 top-0 -translate-x-1/2 w-[13%] h-1.5 rounded-b-md bg-control/35" />

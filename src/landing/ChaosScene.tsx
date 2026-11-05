@@ -253,7 +253,8 @@ export const ChaosPinned: React.FC = () => {
   );
 };
 
-// Celular o movimiento reducido: primero el desorden, debajo la ficha que se enciende parte por parte
+// Celular o movimiento reducido: primero el desorden y, desde 1024 px, al lado la ficha que se enciende parte por parte.
+// En celular no va la ficha: la sección siguiente ("Una ficha, tres respuestas") la muestra entera.
 export const ChaosStacked: React.FC<{ still: boolean }> = ({ still }) => {
   const [ref, seen] = useInView<HTMLDivElement>(0.35);
   const on = still || seen;
@@ -282,7 +283,7 @@ export const ChaosStacked: React.FC<{ still: boolean }> = ({ still }) => {
         </div>
         <div>
           {copyB}
-          <div ref={ref} className="mt-8">
+          <div ref={ref} className="mt-8 hidden lg:block">
             <ChaosFicha lit={() => on} stagger={!still} />
           </div>
         </div>
