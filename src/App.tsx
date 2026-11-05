@@ -27,6 +27,12 @@ const readSession = (): SessionUser | null => {
   return null;
 };
 
+// "Abrir el comparador" de la landing llega con ?comparar=5,3,1 y trae esas opciones; si no, el comparador empieza vacío
+const compareFromLanding = (): string[] => {
+  const ids = new URLSearchParams(window.location.search).get('comparar')?.split(',') ?? [];
+  return ids.filter((id, i) => ids.indexOf(id) === i && INITIAL_PROPERTIES.some((p) => p.id === id)).slice(0, 3);
+};
+
 export default function App() {
   const [user, setUser] = useState<SessionUser | null>(readSession);
   // "Ingresar" de la landing llega con ?ingresar y abre el inicio de sesión de una vez
@@ -34,17 +40,18 @@ export default function App() {
   const [authOpen, setAuthOpen] = useState(() => fromLandingLogin() && !readSession());
   const [authMode, setAuthMode] = useState<'login' | 'register'>(() => (fromLandingLogin() ? 'login' : 'register'));
   const [currentHash, setCurrentHash] = useState(() => window.location.hash || '#buscar');
-  const [comparisonIds, setComparisonIds] = useState<string[]>(['1', '3']); // Inicialmente 2 propiedades (Chapinero Alto vs Cedritos)
+  const [comparisonIds, setComparisonIds] = useState<string[]>(compareFromLanding);
   const [contactingProperty, setContactingProperty] = useState<Property | null>(null);
   // Perfil de transporte compartido: el total del mes es el mismo en catálogo, ficha y comparador
   const [transportProfileId, setTransportProfileId] = useState('standard');
   const modalRef = useRef<HTMLDivElement>(null);
 
-  // Quitar ?ingresar de la dirección para que al recargar no se vuelva a abrir
+  // Quitar ?ingresar y ?comparar de la dirección para que al recargar no se vuelvan a aplicar
   useEffect(() => {
     const url = new URL(window.location.href);
-    if (!url.searchParams.has('ingresar')) return;
+    if (!url.searchParams.has('ingresar') && !url.searchParams.has('comparar')) return;
     url.searchParams.delete('ingresar');
+    url.searchParams.delete('comparar');
     window.history.replaceState(null, '', url.pathname + url.search + url.hash);
   }, []);
 
@@ -56,6 +63,17 @@ export default function App() {
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
+
+  // Al pasar del catálogo al comparador, o al revés, la página empieza arriba
+  const view = currentHash === '#comparar' ? 'comparar' : 'buscar';
+  const firstView = useRef(true);
+  useEffect(() => {
+    if (firstView.current) {
+      firstView.current = false;
+      return;
+    }
+    window.scrollTo(0, 0);
+  }, [view]);
 
   // Capa fija en vez de <dialog>: con showModal() Brave se cerraba al autocompletar el correo
   useEffect(() => {
@@ -145,7 +163,8 @@ export default function App() {
       />
 
       <main className="flex-1">
-        {currentHash === '#comparar' ? (
+        {/* El catálogo sigue montado mientras se ve el comparador: al volver conserva sus filtros */}
+        {view === 'comparar' && (
           <PropertyComparer
             transportProfileId={transportProfileId}
             onTransportProfileChange={setTransportProfileId}
@@ -159,20 +178,19 @@ export default function App() {
               window.location.hash = '#buscar';
             }}
           />
-        ) : (
-          <div id="buscar" className="scroll-mt-16">
-            <PropertyPortal
-              transportProfileId={transportProfileId}
-              onTransportProfileChange={setTransportProfileId}
-              comparisonIds={comparisonIds}
-              onToggleComparison={handleToggleComparison}
-              onOpenComparer={() => {
-                window.location.hash = '#comparar';
-              }}
-              onContactProperty={(prop) => setContactingProperty(prop)}
-            />
-          </div>
         )}
+        <div id="buscar" className="scroll-mt-16" hidden={view === 'comparar'}>
+          <PropertyPortal
+            transportProfileId={transportProfileId}
+            onTransportProfileChange={setTransportProfileId}
+            comparisonIds={comparisonIds}
+            onToggleComparison={handleToggleComparison}
+            onOpenComparer={() => {
+              window.location.hash = '#comparar';
+            }}
+            onContactProperty={(prop) => setContactingProperty(prop)}
+          />
+        </div>
       </main>
 
       <Footer />
