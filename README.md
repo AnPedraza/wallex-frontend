@@ -3,12 +3,13 @@
 Plataforma web para buscar, comparar y contactar vivienda en Bogotá, con la identidad de quien publica verificada. Es el proyecto del curso *Proyecto de Innovación y Emprendimiento en TI* (Pontificia Universidad Javeriana).
 
 - **App desplegada:** https://wallex-frontend.vercel.app
-- **Versión:** `v0.1` (Release 1)
-- **Estado:** prototipo de frontend. No hay backend, base de datos ni correo real; lo simulado está listado más abajo.
+- **Landing:** https://wallex-frontend.vercel.app/inicio/
+- **Versión:** `v0.3` (Release 3)
+- **Estado:** prototipo. Las cuentas son reales y se guardan en Supabase; los inmuebles son de ejemplo y lo simulado está listado más abajo.
 
 ## Qué se puede hacer en esta versión
 
-1. Crear una cuenta con correo y contraseña. La verificación de identidad no se pide al registrarse, sino más adelante, cuando el usuario quiere escribirle a un propietario.
+1. Crear una cuenta con correo y contraseña, que sirve desde cualquier dispositivo. La verificación de identidad no se pide al registrarse, sino más adelante, cuando el usuario quiere escribirle a un propietario.
 2. Ver la sesión en la barra de navegación (correo y botón «Salir») y moverse con la barra y el pie de página, también en celular.
 3. Filtrar los inmuebles por zona, por total del mes máximo (canon + administración + transporte), por verificación de quien publica y por requisitos, y elegir cómo te mueves para calcular el transporte.
 4. Abrir la ficha estandarizada de un inmueble: canon, administración, total mensual, depósito y requisitos del arrendador.
@@ -18,7 +19,7 @@ Plataforma web para buscar, comparar y contactar vivienda en Bogotá, con la ide
 
 ## Qué está simulado
 
-- **Cuentas:** se guardan solo en el `localStorage` del navegador (correo y un hash SHA-256 con sal, nunca la contraseña). No hay servidor.
+- **Cuentas sin Supabase:** si el proyecto no tiene las variables de Supabase (por ejemplo, en local sin `.env.local`), las cuentas se guardan solo en el `localStorage` del navegador, con el correo y un hash SHA-256 con sal, nunca la contraseña.
 - **Verificación KYC:** es una simulación en dos pasos (lo que se pediría y la autorización de datos, y luego la confirmación). No se toma ninguna foto ni hay un proveedor de identidad detrás. La pantalla lo dice.
 - **Datos de contacto:** al terminar la verificación la pantalla explica que en la versión real ahí se vería el contacto. No se envía ningún correo.
 - **Números de folio:** los folios de matrícula que aparecen en las tarjetas son de ejemplo y van marcados como tales.
@@ -38,7 +39,16 @@ npm run dev
 
 Abre http://localhost:5173 en el navegador.
 
-Para probarlo desde un celular conectado a la misma red Wi-Fi, arráncalo con `npm run dev -- --host` y abre la dirección «Network» que imprime Vite. Por esa dirección se ve todo, pero el registro no funciona: necesita https para calcular el hash de la contraseña. Para probar el registro en el celular, usa la app desplegada.
+**Cuentas reales (opcional).** Para crear cuentas en Supabase desde tu computador, crea un archivo `.env.local` al lado de `package.json` con estas dos líneas (los valores te los pasa el equipo, o salen del botón «Connect» del proyecto en Supabase):
+
+```
+VITE_SUPABASE_URL=https://<proyecto>.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+```
+
+Sin ese archivo todo funciona igual, pero las cuentas quedan simuladas en tu navegador. Git ignora `.env.local`. En Vercel las mismas dos variables van en Settings → Environment Variables.
+
+Para probarlo desde un celular conectado a la misma red Wi-Fi, arráncalo con `npm run dev -- --host` y abre la dirección «Network» que imprime Vite. Con las variables de Supabase el registro funciona por esa dirección; sin ellas no, porque la cuenta simulada necesita https para calcular el hash de la contraseña.
 
 Otros comandos:
 
@@ -53,16 +63,19 @@ Otros comandos:
 1. Abre «Ingresar / Crear cuenta» y regístrate con un correo y una contraseña de al menos 8 caracteres.
 2. En «Buscar vivienda», filtra por zona y mueve el control del total del mes.
 3. Entra a «Ver ficha» de un inmueble y revisa lo que pagas cada mes y los requisitos.
-4. Abre el «Comparador lado a lado». Arranca con dos inmuebles ya elegidos (Chapinero Alto y Cedritos), que en el catálogo aparecen como «En comparador»; con «Comparar» en otra tarjeta sumas un tercero.
+4. Marca «Comparar» en dos o tres tarjetas y abre el «Comparador lado a lado». Empieza vacío: solo muestra lo que eliges.
 5. Pulsa «Contactar» en la tarjeta (o «Contactar a quien publica» en la ficha o el comparador), marca la autorización y completa la verificación.
 
 ## Estructura
 
 ```
 src/
-  App.tsx                    navegación por hash (#buscar, #comparar), sesión y modales
+  App.tsx                    navegación por hash (#buscar, #comparar, #privacidad), sesión y modales
+  lib/                       conexión con Supabase (accounts.ts dice si hay variables; supabase.ts es el cliente)
+  landing/                   página de inicio en /inicio
   components/
     AuthForm.tsx             registro e inicio de sesión
+    PrivacyPolicy.tsx        política de tratamiento de datos (Ley 1581)
     Navbar.tsx, Footer.tsx   barra de navegación y pie de página
     PropertyPortal.tsx       catálogo con filtros
     PropertyDetail.tsx       ficha estandarizada
@@ -78,7 +91,7 @@ src/
 
 ## Tecnologías
 
-React 19, TypeScript, Vite y Tailwind CSS 4, con la tipografía Schibsted Grotesk servida desde el proyecto (licencia OFL en `src/assets/fonts/`). El sistema visual está documentado en `DESIGN.md` y el producto en `PRODUCT.md`. Cada push a `main` se despliega solo en Vercel. Los siguientes releases suman un backend con Node.js, Express y PostgreSQL, y un proveedor externo para la verificación de identidad.
+React 19, TypeScript, Vite y Tailwind CSS 4, con la tipografía Schibsted Grotesk servida desde el proyecto (licencia OFL en `src/assets/fonts/`). El sistema visual está documentado en `DESIGN.md` y el producto en `PRODUCT.md`. Cada push a `main` se despliega solo en Vercel. Las cuentas usan Supabase (autenticación sobre PostgreSQL). La verificación de identidad con un proveedor externo queda para después.
 
 ## Equipo
 
@@ -90,4 +103,4 @@ React 19, TypeScript, Vite y Tailwind CSS 4, con la tipografía Schibsted Grotes
 | Federico Mejía | Comparador lado a lado de costo total |
 | Juan Diego Ariza | Registro e inicio de sesión, barra de navegación y pie de página |
 
-Los datos personales se diseñan conforme a la Ley 1581 de 2012. En esta versión de prueba no salen del navegador.
+Los datos personales se tratan conforme a la Ley 1581 de 2012. El correo de la cuenta se guarda en Supabase y la política de datos está en https://wallex-frontend.vercel.app/#privacidad.
