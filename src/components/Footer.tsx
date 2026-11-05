@@ -1,5 +1,6 @@
 import React from 'react';
 import logo from '../assets/wallex-logo.png';
+import { serverAccounts } from '../lib/accounts';
 
 interface FooterLink {
   label: string;
@@ -48,10 +49,19 @@ export const Footer: React.FC<FooterProps> = ({ links = defaultLinks }) => {
         <div id="datos" className="space-y-2 scroll-mt-20">
           <h2 className="text-sm font-semibold text-white">Tus datos</h2>
           <p className="text-[13px] leading-relaxed max-w-md">
-            El tratamiento de datos personales en Wallex se diseña conforme a la Ley 1581 de 2012.
-            En esta versión de prueba tu correo y tu cuenta se guardan solo en tu navegador y no se
-            envían a ningún servidor.
+            El tratamiento de datos personales en Wallex se diseña conforme a la Ley 1581 de 2012.{' '}
+            {serverAccounts
+              ? 'Tu correo se guarda en Supabase solo para manejar tu cuenta, y puedes pedir que lo borremos.'
+              : 'En esta versión de prueba tu correo y tu cuenta se guardan solo en tu navegador y no se envían a ningún servidor.'}
           </p>
+          {serverAccounts && (
+            <a
+              href="/#privacidad"
+              className="inline-block text-[13px] font-semibold text-white underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            >
+              Política de datos
+            </a>
+          )}
         </div>
       </div>
 

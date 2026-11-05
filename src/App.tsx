@@ -4,16 +4,18 @@ import { ContactVerification } from './components/ContactVerification';
 import { Footer } from './components/Footer';
 import { Navbar } from './components/Navbar';
 import type { NavLink } from './components/Navbar';
+import { PrivacyPolicy } from './components/PrivacyPolicy';
 import { PropertyPortal } from './components/PropertyPortal';
 import { PropertyComparer } from './components/PropertyComparer';
 import { INITIAL_PROPERTIES } from './data/mockProperties';
+import { supabase } from './lib/supabase';
 import type { Property } from './types/property';
 
 interface SessionUser {
   email: string;
 }
 
-// La sesión es simulada y vive en localStorage (ver AuthForm)
+// Sesión simulada en localStorage (ver AuthForm). Con Supabase, la sesión la guarda Supabase.
 const readSession = (): SessionUser | null => {
   try {
     const raw = localStorage.getItem(SESSION_KEY);
@@ -34,10 +36,10 @@ const compareFromLanding = (): string[] => {
 };
 
 export default function App() {
-  const [user, setUser] = useState<SessionUser | null>(readSession);
+  const [user, setUser] = useState<SessionUser | null>(() => (supabase ? null : readSession()));
   // "Ingresar" de la landing llega con ?ingresar y abre el inicio de sesión de una vez
   const fromLandingLogin = () => new URLSearchParams(window.location.search).has('ingresar');
-  const [authOpen, setAuthOpen] = useState(() => fromLandingLogin() && !readSession());
+  const [authOpen, setAuthOpen] = useState(() => fromLandingLogin() && (supabase !== null || !readSession()));
   const [authMode, setAuthMode] = useState<'login' | 'register'>(() => (fromLandingLogin() ? 'login' : 'register'));
   const [currentHash, setCurrentHash] = useState(() => window.location.hash || '#buscar');
   const [comparisonIds, setComparisonIds] = useState<string[]>(compareFromLanding);
@@ -55,7 +57,20 @@ export default function App() {
     window.history.replaceState(null, '', url.pathname + url.search + url.hash);
   }, []);
 
-  // Escuchar cambios de hash para navegación (#buscar o #comparar)
+  // Con cuentas de verdad, Supabase guarda la sesión; aquí solo se lee al entrar y se escuchan sus cambios
+  useEffect(() => {
+    if (!supabase) return;
+    const auth = supabase.auth;
+    const toUser = (email?: string) => (email ? { email } : null);
+    auth.getSession().then(({ data }) => {
+      setUser(toUser(data.session?.user.email));
+      if (data.session) setAuthOpen(false);
+    });
+    const { data } = auth.onAuthStateChange((_event, session) => setUser(toUser(session?.user.email)));
+    return () => data.subscription.unsubscribe();
+  }, []);
+
+  // Escuchar cambios de hash para navegación (#buscar, #comparar o #privacidad)
   useEffect(() => {
     const onHashChange = () => {
       setCurrentHash(window.location.hash || '#buscar');
@@ -64,8 +79,8 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
 
-  // Al pasar del catálogo al comparador, o al revés, la página empieza arriba
-  const view = currentHash === '#comparar' ? 'comparar' : 'buscar';
+  // Al pasar del catálogo al comparador (o a la política de datos), y al volver, la página empieza arriba
+  const view = currentHash === '#comparar' ? 'comparar' : currentHash === '#privacidad' ? 'privacidad' : 'buscar';
   const firstView = useRef(true);
   useEffect(() => {
     if (firstView.current) {
@@ -94,10 +109,14 @@ export default function App() {
   const closeAuth = () => setAuthOpen(false);
 
   const handleLogout = () => {
-    try {
-      localStorage.removeItem(SESSION_KEY);
-    } catch {
-      // Igual se cierra la sesión en pantalla
+    if (supabase) {
+      void supabase.auth.signOut();
+    } else {
+      try {
+        localStorage.removeItem(SESSION_KEY);
+      } catch {
+        // Igual se cierra la sesión en pantalla
+      }
     }
     setUser(null);
   };
@@ -179,7 +198,8 @@ export default function App() {
             }}
           />
         )}
-        <div id="buscar" className="scroll-mt-16" hidden={view === 'comparar'}>
+        {view === 'privacidad' && <PrivacyPolicy />}
+        <div id="buscar" className="scroll-mt-16" hidden={view !== 'buscar'}>
           <PropertyPortal
             transportProfileId={transportProfileId}
             onTransportProfileChange={setTransportProfileId}

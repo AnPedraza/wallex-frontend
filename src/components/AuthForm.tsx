@@ -1,4 +1,7 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
+import type { AuthError } from '@supabase/supabase-js';
+import { serverAccounts } from '../lib/accounts';
+import { supabase } from '../lib/supabase';
 
 type AuthMode = 'login' | 'register';
 type Status = 'idle' | 'loading' | 'success';
@@ -18,8 +21,9 @@ interface StoredUser {
   hash: string;
 }
 
-// Auth simulada: todo vive en el localStorage de este navegador, no hay servidor.
-// Se guarda el correo y un hash SHA-256 con sal, nunca la contraseña.
+// Con las variables de Supabase, la cuenta es de verdad: Supabase guarda el correo y la contraseña protegida.
+// Sin ellas, la cuenta es simulada y vive en el localStorage de este navegador: el correo y un hash SHA-256
+// con sal, nunca la contraseña.
 const USERS_KEY = 'wallex.users';
 export const SESSION_KEY = 'wallex.session';
 const MIN_PASSWORD = 8;
@@ -61,6 +65,32 @@ const validatePassword = (password: string, mode: AuthMode) => {
   return undefined;
 };
 
+// Los errores de Supabase, dichos con lo que hay que hacer
+const serverMessage = (error: AuthError, register: boolean) => {
+  switch (error.code) {
+    case 'user_already_exists':
+    case 'email_exists':
+      return 'Ya hay una cuenta con este correo. Inicia sesión con tu contraseña.';
+    case 'invalid_credentials':
+      return 'El correo o la contraseña no coinciden. Revisa que el correo esté bien escrito y las mayúsculas de la contraseña.';
+    case 'weak_password':
+      return 'Esa contraseña es muy fácil de adivinar. Usa una más larga o mezcla letras y números.';
+    case 'email_address_invalid':
+      return 'Revisa el correo: debe tener la forma nombre@correo.com, sin espacios.';
+    case 'email_not_confirmed':
+      return 'Confirma tu correo con el enlace que te enviamos y vuelve a entrar.';
+    case 'over_request_rate_limit':
+    case 'over_email_send_rate_limit':
+      return 'Hubo muchos intentos seguidos. Espera un minuto e inténtalo de nuevo.';
+    case 'signup_disabled':
+      return 'Por ahora no se pueden crear cuentas nuevas. Inténtalo más tarde.';
+  }
+  if (error.name === 'AuthRetryableFetchError') return 'No pudimos conectarnos. Revisa tu internet e inténtalo de nuevo.';
+  return register
+    ? 'No pudimos crear la cuenta en este momento. Inténtalo de nuevo en un rato.'
+    : 'No pudimos iniciar sesión en este momento. Inténtalo de nuevo en un rato.';
+};
+
 const inputClass = (hasError: boolean) =>
   `w-full bg-paper border rounded-lg p-3 text-sm text-ink focus:outline-none focus:ring-2 ${
     hasError ? 'border-unverified focus:ring-unverified' : 'border-control focus:ring-ink'
@@ -73,16 +103,21 @@ export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'register', on
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [consent, setConsent] = useState(false);
+  const [consentError, setConsentError] = useState('');
   const [status, setStatus] = useState<Status>('idle');
 
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
+  const consentRef = useRef<HTMLInputElement>(null);
   const successTimer = useRef<number | undefined>(undefined);
 
   const ids = useId();
   const titleId = `${ids}-title`;
   const emailId = `${ids}-email`;
   const passwordId = `${ids}-password`;
+  const consentId = `${ids}-consent`;
 
   const isRegister = mode === 'register';
   const normalizedEmail = email.trim().toLowerCase();
@@ -93,7 +128,15 @@ export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'register', on
     setMode(isRegister ? 'login' : 'register');
     setErrors({});
     setFormError('');
+    setNotice('');
+    setConsentError('');
     setPassword('');
+  };
+
+  const finish = () => {
+    setStatus('success');
+    // Pausa corta para que se alcance a leer el mensaje de éxito
+    successTimer.current = window.setTimeout(() => onSuccess?.({ email: normalizedEmail }), 900);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -106,8 +149,39 @@ export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'register', on
     };
     setErrors(nextErrors);
     setFormError('');
+    setNotice('');
     if (nextErrors.email) return emailRef.current?.focus();
     if (nextErrors.password) return passwordRef.current?.focus();
+    // Con cuentas de verdad el correo sale del navegador: la Ley 1581 pide la autorización antes
+    if (isRegister && serverAccounts && !consent) {
+      setConsentError('Marca la autorización para crear la cuenta.');
+      return consentRef.current?.focus();
+    }
+
+    if (supabase) {
+      setStatus('loading');
+      try {
+        const { data, error } = isRegister
+          ? await supabase.auth.signUp({ email: normalizedEmail, password })
+          : await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
+        if (error) {
+          setFormError(serverMessage(error, isRegister));
+          setStatus('idle');
+          return;
+        }
+        if (!data.session) {
+          // Solo pasa si el proyecto de Supabase pide confirmar el correo antes de entrar
+          setNotice('Te enviamos un correo para confirmar la cuenta. Ábrelo y después inicia sesión.');
+          setStatus('idle');
+          return;
+        }
+        finish();
+      } catch {
+        setFormError('No pudimos conectarnos. Revisa tu internet e inténtalo de nuevo.');
+        setStatus('idle');
+      }
+      return;
+    }
 
     if (!window.crypto?.subtle) {
       setFormError('Este navegador no permite crear la cuenta aquí. Abre Wallex desde su dirección https.');
@@ -143,9 +217,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'register', on
       }
 
       localStorage.setItem(SESSION_KEY, JSON.stringify({ email: normalizedEmail }));
-      setStatus('success');
-      // Pausa corta para que se alcance a leer el mensaje de éxito
-      successTimer.current = window.setTimeout(() => onSuccess?.({ email: normalizedEmail }), 900);
+      finish();
     } catch {
       setFormError('No pudimos guardar tus datos en este navegador. Revisa que no esté en modo privado e inténtalo de nuevo.');
       setStatus('idle');
@@ -264,9 +336,46 @@ export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'register', on
         )}
       </div>
 
+      {isRegister && serverAccounts && (
+        <div>
+          <label htmlFor={consentId} className="flex items-start gap-3 text-xs text-ink-soft leading-relaxed cursor-pointer">
+            <input
+              ref={consentRef}
+              id={consentId}
+              type="checkbox"
+              checked={consent}
+              onChange={(e) => {
+                setConsent(e.target.checked);
+                if (e.target.checked) setConsentError('');
+              }}
+              aria-invalid={Boolean(consentError)}
+              aria-describedby={consentError ? `${consentId}-error` : undefined}
+              className="mt-0.5 size-4 accent-ink shrink-0 cursor-pointer"
+            />
+            <span>
+              Autorizo que Wallex guarde mi correo para crear y manejar mi cuenta, según la{' '}
+              <a href="/#privacidad" target="_blank" rel="noopener" className="font-semibold text-ink underline underline-offset-2">
+                política de datos
+              </a>{' '}
+              (Ley 1581 de 2012).
+            </span>
+          </label>
+          {consentError && (
+            <p id={`${consentId}-error`} className="mt-1.5 text-xs text-unverified">
+              {consentError}
+            </p>
+          )}
+        </div>
+      )}
+
       {formError && (
         <p role="alert" className="text-sm bg-unverified/10 text-unverified border border-unverified/30 rounded-lg p-3">
           {formError}
+        </p>
+      )}
+      {notice && (
+        <p role="status" className="text-sm bg-paper text-ink border border-rule rounded-lg p-3">
+          {notice}
         </p>
       )}
 
@@ -290,7 +399,9 @@ export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'register', on
       </p>
 
       <p className="text-xs text-center text-ink-soft">
-        Tus datos quedan solo en este navegador; Wallex no los envía a ningún servidor.
+        {serverAccounts
+          ? 'Tu correo se guarda en Supabase, el servicio de cuentas de Wallex. La contraseña nunca se guarda tal cual.'
+          : 'Tus datos quedan solo en este navegador; Wallex no los envía a ningún servidor.'}
       </p>
     </form>
   );
