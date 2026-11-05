@@ -297,10 +297,22 @@ El orden de la columna del folio es fijo: lugar, título (28 px, 800), metadatos
 - **Opciones:** una tarjeta por inmueble con su total del mes (28 px) y la diferencia frente a la más barata. Debajo va la **barra de desglose a la misma escala** que el total más alto: canon en tinta, administración en tinta suave y transporte en borde de control, y una sola leyenda arriba. Después vienen el sello, el estado de verificación y "Contactar a quien publica". La más barata se marca con borde en tinta, no en verde.
 - **Tabla punto por punto:** primera columna fija, filas en orden fijo y secciones (Dinero, Confianza, Requisitos, El inmueble) separadas por un filete en tinta. El menor valor se marca con la palabra "Menor" subrayada en tinta. Solo el estado de verificación usa verde, ámbar o rojo.
 
+### Publicar un arriendo
+- **Vista `#publicar`,** con barra y pie. Sin sesión pide crear la cuenta (con «Quiero publicar» marcado) o entrar.
+- **Orden fijo:** el inmueble, lo que se paga, lo que pides, cómo se llega, fotos, descripción y quién publica, separados por filetes en una sola tarjeta blanca. Es el mismo orden de la ficha.
+- **Lo que se paga** muestra en vivo el total del mes como lo verá quien busca: canon, administración y un transporte estimado de $ 156.200 (2 pasajes al día, 22 días hábiles).
+- **Fotos:** de 1 a 8, en JPG, PNG o WebP. Se achican en el navegador a 1600 px y se suben en JPEG. La primera es la portada; las demás tienen «Hacer portada» y una X para quitarlas. En celular van de a dos.
+- **Quién publica** viene lleno con los datos del registro. El celular lo ven solo las personas con cuenta.
+- **Honestidad:** lo publicado sale «Sin verificar» mientras la verificación de identidad sea simulada. El formulario lo dice antes de publicar.
+- **Mis publicaciones** (`#mis-publicaciones`) lista cada arriendo con foto, estado, fecha y total del mes, y deja pausar, volver a publicar o borrar (con confirmación, porque también borra las fotos).
+- **La barra** nunca pasa de tres enlaces: quien publica ve «Mis publicaciones» y los demás, «Publicar arriendo».
+
 ### Verificación al contactar
 Modal de dos pasos (`ContactVerification`), con fondo en tinta al 55 %:
 1. **Explicación y autorización.** Dice para qué sirve (que quien publica sepa que eres una persona real, igual que el sello te dice a ti quién publica), qué se pedirá (cédula por ambos lados y una selfie, con íconos de trazo) y el estado de quien publica con su sello. Si quien publica no está verificado, advierte que no se consigne dinero antes de ver el inmueble. Lleva la casilla de autorización de la Ley 1581, y el botón "Verificar mi identidad" queda deshabilitado (45 % de opacidad) hasta marcarla.
 2. **Confirmación.** Muestra el sello verificado a 76 px y dice que es una simulación y que no se envía ningún correo.
+
+En lo publicado por personas reales, sin sesión el modal pide entrar a la cuenta. Con sesión, al terminar muestra el nombre y el celular de quien publica, con «Escribir por WhatsApp» y «Llamar», y repite que no se consigne dinero antes de ver el inmueble.
 
 La regla que manda: la pantalla nunca afirma algo que el prototipo no hace.
 
