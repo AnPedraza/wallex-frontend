@@ -119,7 +119,12 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
         </div>
 
-        {/* Celular */}
+        {/* Celular: con sesión, el correo queda a la vista junto al menú */}
+        {user && (
+          <span className="lg:hidden ml-auto -mr-3 min-w-0 max-w-[10rem] truncate text-[13px] text-ink-soft" title={user.email}>
+            {user.email}
+          </span>
+        )}
         <button
           type="button"
           onClick={() => setMenuOpen((v) => !v)}
