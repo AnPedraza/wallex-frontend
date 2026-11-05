@@ -9,7 +9,7 @@ const sections: { title: string; body: React.ReactNode }[] = [
     title: 'Quién responde por tus datos',
     body: (
       <>
-        El equipo Wallex, formado por estudiantes del curso. Para cualquier pregunta sobre tus datos escríbenos a{' '}
+        El equipo de Wallex. Para cualquier pregunta sobre tus datos escríbenos a{' '}
         {CONTACT_EMAIL ? (
           <a href={`mailto:${CONTACT_EMAIL}`} className="font-semibold text-ink underline underline-offset-2">
             {CONTACT_EMAIL}
@@ -23,7 +23,7 @@ const sections: { title: string; body: React.ReactNode }[] = [
   },
   {
     title: 'Qué guardamos',
-    body: 'Tu correo y tu contraseña, para crear tu cuenta y que puedas entrar desde cualquier dispositivo. La contraseña se guarda protegida: nadie del equipo la puede ver. No pedimos cédula, fotos ni datos de pago; la verificación de identidad de este prototipo es simulada y no guarda nada.',
+    body: 'Tu correo y tu contraseña, para crear tu cuenta y que puedas entrar desde cualquier dispositivo. La contraseña se guarda protegida: nadie del equipo la puede ver. No pedimos cédula, fotos ni datos de pago; la verificación de identidad que ves al contactar es simulada y no guarda nada.',
   },
   {
     title: 'Para qué los usamos',
@@ -39,7 +39,7 @@ const sections: { title: string; body: React.ReactNode }[] = [
   },
   {
     title: 'Vigencia',
-    body: 'Esta política rige desde el 5 de noviembre de 2026, mientras el prototipo esté en uso. Si cambia, lo publicamos aquí.',
+    body: 'Esta política rige desde el 5 de noviembre de 2026. Si cambia, lo publicamos aquí.',
   },
 ];
 
@@ -56,7 +56,6 @@ export const PrivacyPolicy: React.FC = () => (
     </a>
     <h1 className="mt-6 text-[2rem] lg:text-[2.75rem] leading-[1.08] font-extrabold tracking-[-0.03em]">Política de tratamiento de datos</h1>
     <p className="mt-4 text-[15px] text-ink-soft leading-relaxed">
-      Wallex es un prototipo académico del curso Proyecto de Innovación y Emprendimiento en TI de la Pontificia Universidad Javeriana.
       Aquí te contamos qué datos guardamos, para qué y cómo puedes pedir que los cambiemos o los borremos, según la Ley 1581 de 2012.
     </p>
     <div className="mt-8 divide-y divide-rule border-y border-rule">

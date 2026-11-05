@@ -531,7 +531,7 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
             <button
               type="button"
               onClick={() => {
-                alert('Verificación simulada: en este prototipo no se envía ningún correo.');
+                alert('Verificación simulada: no se envía ningún correo.');
                 setShowKycModal(false);
               }}
               className="w-full bg-ink text-white font-semibold py-3 rounded-lg hover:bg-ink-hover text-sm"

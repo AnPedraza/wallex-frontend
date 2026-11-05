@@ -42,11 +42,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ mode, onSuccess, onBack 
         </button>
       </header>
 
-      <div ref={formRef} className="flex-1 flex justify-center items-start sm:items-center px-4 pt-6 pb-12">
+      <div ref={formRef} className="flex-1 flex justify-center items-start sm:items-center px-4 pt-6 pb-16">
         <AuthForm key={mode} initialMode={mode} onSuccess={onSuccess} />
       </div>
-
-      <p className="px-4 pb-6 text-center text-xs text-ink-faint">Prototipo académico, Pontificia Universidad Javeriana</p>
     </div>
   );
 };

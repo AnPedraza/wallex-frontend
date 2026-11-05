@@ -312,7 +312,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'register', on
             }}
             onBlur={() => password && setErrors((prev) => ({ ...prev, password: validatePassword(password, mode) }))}
             aria-invalid={Boolean(errors.password)}
-            aria-describedby={`${passwordId}-hint${errors.password ? ` ${passwordId}-error` : ''}`}
+            aria-describedby={[isRegister && `${passwordId}-hint`, errors.password && `${passwordId}-error`].filter(Boolean).join(' ') || undefined}
             className={`${inputClass(Boolean(errors.password))} pr-24`}
           />
           <button
@@ -325,10 +325,11 @@ export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'register', on
             {showPassword ? 'Ocultar' : 'Mostrar'}
           </button>
         </div>
-        <p id={`${passwordId}-hint`} className="mt-1.5 text-xs text-ink-soft">
-          {isRegister ? `Mínimo ${MIN_PASSWORD} caracteres. ` : ''}Es un prototipo: no uses una
-          contraseña de otro servicio.
-        </p>
+        {isRegister && (
+          <p id={`${passwordId}-hint`} className="mt-1.5 text-xs text-ink-soft">
+            Mínimo {MIN_PASSWORD} caracteres.
+          </p>
+        )}
         {errors.password && (
           <p id={`${passwordId}-error`} className="mt-1 text-xs text-unverified">
             {errors.password}
@@ -396,12 +397,6 @@ export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'register', on
         >
           {isRegister ? 'Inicia sesión' : 'Regístrate'}
         </button>
-      </p>
-
-      <p className="text-xs text-center text-ink-soft">
-        {serverAccounts
-          ? 'Tu correo se guarda en Supabase, el servicio de cuentas de Wallex. La contraseña nunca se guarda tal cual.'
-          : 'Tus datos quedan solo en este navegador; Wallex no los envía a ningún servidor.'}
       </p>
     </form>
   );

@@ -48,12 +48,7 @@ export const Footer: React.FC<FooterProps> = ({ links = defaultLinks }) => {
 
         <div id="datos" className="space-y-2 scroll-mt-20">
           <h2 className="text-sm font-semibold text-white">Tus datos</h2>
-          <p className="text-[13px] leading-relaxed max-w-md">
-            El tratamiento de datos personales en Wallex se diseña conforme a la Ley 1581 de 2012.{' '}
-            {serverAccounts
-              ? 'Tu correo se guarda en Supabase solo para manejar tu cuenta, y puedes pedir que lo borremos.'
-              : 'En esta versión de prueba tu correo y tu cuenta se guardan solo en tu navegador y no se envían a ningún servidor.'}
-          </p>
+          <p className="text-[13px] leading-relaxed max-w-md">Tratamos tus datos personales conforme a la Ley 1581 de 2012.</p>
           {serverAccounts && (
             <a
               href="/#privacidad"
@@ -67,7 +62,7 @@ export const Footer: React.FC<FooterProps> = ({ links = defaultLinks }) => {
 
       <div className="border-t border-white/10">
         <p className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-4 text-xs text-night-faint">
-          Prototipo académico, Pontificia Universidad Javeriana · {new Date().getFullYear()}
+          © {new Date().getFullYear()} Wallex
         </p>
       </div>
     </footer>

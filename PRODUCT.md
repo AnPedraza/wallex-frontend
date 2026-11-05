@@ -48,9 +48,9 @@ Lo que existe en la versión `v0.1`:
 
 Restricciones:
 - **La verificación de identidad no va en el registro.** Se pide cuando el usuario quiere escribirle a un propietario. Pedirla desde la entrada generaba rechazo (hallazgo H3). Esta decisión está cerrada.
-- Prototipo solo de frontend. No hay backend, base de datos ni correo real.
-  - Las cuentas se guardan en el `localStorage` del navegador: correo y hash SHA-256 con sal, nunca la contraseña.
-  - El KYC es una pantalla de confirmación simulada.
+- Frontend con cuentas reales en Supabase. No hay otro backend ni correo real.
+  - Las cuentas usan Supabase. Sin sus variables, quedan en el `localStorage` del navegador: correo y hash SHA-256 con sal, nunca la contraseña.
+  - El KYC es una pantalla de confirmación simulada, y lo dice en pantalla.
   - Los inmuebles son datos de ejemplo (`src/data/`).
   - Todo lo simulado se declara en los reportes.
 - Stack: React 19, TypeScript, Vite 8 y Tailwind CSS 4. Navegación por hash (`#buscar`, `#comparar`), sin router. Se despliega en Vercel desde `main`; cada rama tiene su vista previa.
@@ -63,7 +63,7 @@ Restricciones:
 - Nombre: **Wallex**.
 - Logo: una casa sobre raíces dentro de un círculo (`src/assets/wallex-logo.png`, PNG transparente de 512 px). Es fijo y se muestra con "Wallex" al lado como texto real.
 - Colores, tipografía y estilo **no** son fijos y pueden cambiar en el rediseño.
-- Contexto: proyecto académico del curso *Proyecto de Innovación y Emprendimiento en TI*, Pontificia Universidad Javeriana. La página lo aclara en el pie: "Prototipo académico, Pontificia Universidad Javeriana".
+- Contexto: proyecto académico del curso *Proyecto de Innovación y Emprendimiento en TI*, Pontificia Universidad Javeriana. Desde el Release 3 la página se presenta como producto, sin la aclaración de prototipo académico. Lo simulado se sigue diciendo donde se usa (la verificación al contactar) y en los reportes.
 
 ## Evidence on Hand
 

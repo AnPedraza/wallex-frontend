@@ -112,7 +112,7 @@ export const ContactVerification: React.FC<ContactVerificationProps> = ({ proper
               </li>
             </ul>
             <p className="text-[12.5px] text-ink-faint mt-3">
-              En este prototipo la verificación es simulada: no se toma ninguna foto ni se guarda tu información.
+              Por ahora la verificación es simulada: no se toma ninguna foto ni se guarda tu información.
             </p>
 
             <label className="mt-5 flex items-start gap-3 text-sm cursor-pointer">
@@ -149,7 +149,7 @@ export const ContactVerification: React.FC<ContactVerificationProps> = ({ proper
             <p className="text-sm text-ink-soft mt-2 max-w-[42ch] mx-auto">
               Es una simulación. En la versión real aquí verías el teléfono y el correo de {ownerName} y podrías escribirle desde Wallex.
             </p>
-            <p className="text-[12.5px] text-ink-faint mt-3">Este prototipo no envía correos ni guarda tus datos.</p>
+            <p className="text-[12.5px] text-ink-faint mt-3">No se envía ningún correo ni se guardan tus datos.</p>
             <button
               type="button"
               data-autofocus

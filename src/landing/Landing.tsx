@@ -43,7 +43,7 @@ const STEPS: { part: FichaPart; n: number; title: string; body: string }[] = [
     part: 'seal',
     n: 3,
     title: 'Quién publica',
-    body: 'El sello dice si la identidad de quien publica y el certificado de tradición están verificados. En el prototipo esa verificación es simulada.',
+    body: 'El sello dice si la identidad de quien publica y el certificado de tradición están verificados.',
   },
 ];
 
@@ -197,9 +197,6 @@ const Hero: React.FC<{ still: boolean }> = ({ still }) => {
         <div className="enter-up mt-8" style={enter(540)}>
           <LandingSearch />
         </div>
-        <p className="enter-up mt-3 text-[12.5px] text-ink-faint text-pretty" style={enter(680)}>
-          Prototipo académico: inmuebles de ejemplo y verificación simulada.
-        </p>
       </div>
 
       {/* En celular la ficha de ejemplo no va aquí: la explica "Una ficha, tres respuestas" más abajo */}
@@ -499,7 +496,7 @@ const HOW = [
   { title: 'Lee la ficha completa', body: 'Total, requisitos y sello en el mismo orden, en todos los inmuebles.' },
   {
     title: 'Compara y escribe',
-    body: 'Pones hasta tres lado a lado. Cuando quieras escribirle a quien publica, verificas tu identidad; en el prototipo ese paso es simulado.',
+    body: 'Pones hasta tres lado a lado. Cuando quieras escribirle a quien publica, verificas tu identidad.',
   },
 ];
 

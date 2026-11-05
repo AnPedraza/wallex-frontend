@@ -32,7 +32,7 @@ export const AlertsSubscription: React.FC = () => {
           <p className="font-semibold">
             Listo, guardamos tu alerta para <span className="text-verified">{zone}</span>.
           </p>
-          <p className="text-[12.5px] text-ink-faint mt-1">En este prototipo no se envían correos.</p>
+          <p className="text-[12.5px] text-ink-faint mt-1">Por ahora no se envían correos.</p>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
