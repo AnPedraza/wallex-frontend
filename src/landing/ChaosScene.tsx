@@ -31,6 +31,9 @@ const FRAGMENTS: Fragment[] = [
   { kind: 'tag', text: '¿Y quién es el dueño?', x: 55, y: 88, r: 2, to: 'seal', depth: 0.7 },
 ];
 
+// En celular bastan los cuatro primeros: el precio, la administración, el "consigne para separarlo" y el codeudor
+const PHONE_FRAGMENTS = 4;
+
 const FragmentCard: React.FC<{ f: Fragment }> = ({ f }) => {
   if (f.kind === 'post') {
     return (
@@ -265,7 +268,9 @@ export const ChaosStacked: React.FC<{ still: boolean }> = ({ still }) => {
             {FRAGMENTS.map((f, i) => (
               <li
                 key={f.text}
-                className={f.kind === 'me' || f.kind === 'post' ? 'self-end' : f.kind === 'tag' ? 'self-center' : 'self-start'}
+                className={`${f.kind === 'me' || f.kind === 'post' ? 'self-end' : f.kind === 'tag' ? 'self-center' : 'self-start'} ${
+                  i >= PHONE_FRAGMENTS ? 'max-md:hidden' : ''
+                }`}
                 style={{ transform: `rotate(${f.r * 0.5}deg)` }}
               >
                 <div className={still ? '' : 'drift'} style={{ animationDelay: `${-i * 0.7}s` }}>

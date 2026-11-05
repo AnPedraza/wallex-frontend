@@ -79,7 +79,7 @@ export const CityPinned: React.FC = () => {
 };
 
 // Celular o movimiento reducido: a todo el ancho, con un acercamiento leve al cruzar la pantalla.
-// En celular va la toma vertical del mismo vuelo; en pantallas anchas, la horizontal.
+// En celular va la toma vertical del mismo vuelo, más baja para no ocupar una pantalla entera; en pantallas anchas, la horizontal.
 export const CityStacked: React.FC<{ still: boolean }> = ({ still }) => {
   const [ref, p] = useViewProgress<HTMLElement>();
   const wide = useMediaQuery('(min-width: 768px)');
@@ -87,7 +87,7 @@ export const CityStacked: React.FC<{ still: boolean }> = ({ still }) => {
 
   return (
     <section ref={ref}>
-      <div className="relative overflow-hidden h-[88svh] min-h-[520px] max-h-[900px]">
+      <div className="relative overflow-hidden h-[62svh] min-h-[440px] md:h-[88svh] md:min-h-[520px] max-h-[900px]">
         <div className="size-full" style={{ transform: `scale(${zoom})` }}>
           <LoopVideo
             key={wide ? 'ancho' : 'vertical'}

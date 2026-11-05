@@ -7,7 +7,7 @@ import posterDesktop from '../assets/landing/app-recorrido-escritorio.webp';
 import { Footer } from '../components/Footer';
 import { ChaosPinned, ChaosStacked } from './ChaosScene';
 import { CityPinned, CityStacked } from './CityScene';
-import { COMPARE, DEMO, cop, fichaLink, num, totalOf, transportOf } from './data';
+import { COMPARE, DEMO, compareLink, cop, fichaLink, num, totalOf, transportOf } from './data';
 import { FichaDemo, type FichaPart } from './FichaDemo';
 import { LandingSearch } from './LandingSearch';
 import { LoopVideo, VideoToggleIcon, type VideoChoice } from './LoopVideo';
@@ -202,16 +202,9 @@ const Hero: React.FC<{ still: boolean }> = ({ still }) => {
         </p>
       </div>
 
-      <div className="lg:pr-40 flex flex-col items-center lg:items-end">
+      {/* En celular la ficha de ejemplo no va aquí: la explica "Una ficha, tres respuestas" más abajo */}
+      <div className="hidden lg:flex lg:pr-40 flex-col items-end">
         <FichaDemo marks={STEPS.map((s) => s.title)} entrance totalProgress={still ? 1 : count} href={fichaLink(DEMO.id)} />
-        <ol className="lg:hidden mt-4 grid gap-1.5 text-[13px] max-w-[420px]">
-          {STEPS.map((s) => (
-            <li key={s.n} className="flex gap-2">
-              <span className="font-bold w-4">{s.n}</span>
-              <span className="text-ink-soft">{s.title}</span>
-            </li>
-          ))}
-        </ol>
       </div>
     </section>
   );
@@ -467,7 +460,7 @@ const ComparePinned: React.FC = () => {
             </div>
           ))}
         </div>
-        <a href="/#comparar" className={`link-line mt-8 self-start text-[15px] font-semibold rounded ${focusRing}`}>
+        <a href={compareLink()} className={`link-line mt-8 self-start text-[15px] font-semibold rounded ${focusRing}`}>
           Abrir el comparador
         </a>
       </div>
@@ -494,7 +487,7 @@ const CompareStacked: React.FC<{ still: boolean }> = ({ still }) => {
         ))}
       </div>
       <SnapDots containerRef={ref} count={compareRows.length} className="lg:hidden" />
-      <a href="/#comparar" className={`link-line inline-block mt-6 text-[15px] font-semibold rounded ${focusRing}`}>
+      <a href={compareLink()} className={`link-line inline-block mt-6 text-[15px] font-semibold rounded ${focusRing}`}>
         Abrir el comparador
       </a>
     </section>

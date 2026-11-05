@@ -36,3 +36,7 @@ export const num = (v: number) => v.toLocaleString('es-CO');
 
 // Enlace a la ficha de un inmueble en la app: el catálogo la abre al cargar
 export const fichaLink = (id: string) => `/?${new URLSearchParams({ desde: 'landing', ficha: id }).toString()}#buscar`;
+
+// Enlace al comparador de la app con las mismas tres opciones de la landing
+export const compareLink = () =>
+  `/?${new URLSearchParams({ desde: 'landing', comparar: COMPARE.map((p) => p.id).join(',') }).toString()}#comparar`;
