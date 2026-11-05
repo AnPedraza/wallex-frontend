@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
-import { AuthForm, SESSION_KEY } from './components/AuthForm';
+import { SESSION_KEY } from './components/AuthForm';
+import { AuthScreen } from './components/AuthScreen';
 import { ContactVerification } from './components/ContactVerification';
 import { Footer } from './components/Footer';
 import { Navbar } from './components/Navbar';
@@ -35,42 +36,62 @@ const compareFromLanding = (): string[] => {
   return ids.filter((id, i) => ids.indexOf(id) === i && INITIAL_PROPERTIES.some((p) => p.id === id)).slice(0, 3);
 };
 
+// Cada vista vive en el hash. #ingresar y #crear-cuenta son la pantalla de cuenta, sin el catálogo detrás.
+type View = 'buscar' | 'comparar' | 'privacidad' | 'ingresar' | 'crear-cuenta';
+const VIEWS: Record<string, View> = {
+  '#comparar': 'comparar',
+  '#privacidad': 'privacidad',
+  '#ingresar': 'ingresar',
+  '#crear-cuenta': 'crear-cuenta',
+};
+const viewOf = (hash: string): View => VIEWS[hash] ?? 'buscar';
+const isAuthView = (v: View) => v === 'ingresar' || v === 'crear-cuenta';
+
+// Con sesión iniciada, la pantalla de cuenta no tiene nada que hacer: sigue al catálogo
+const leaveAuthIfOpen = () => {
+  if (isAuthView(viewOf(window.location.hash))) window.location.replace('#buscar');
+};
+
 export default function App() {
   const [user, setUser] = useState<SessionUser | null>(() => (supabase ? null : readSession()));
-  // "Ingresar" de la landing llega con ?ingresar y abre el inicio de sesión de una vez
+  // Enlaces viejos de la landing llegan con ?ingresar: se llevan a la pantalla de cuenta
   const fromLandingLogin = () => new URLSearchParams(window.location.search).has('ingresar');
-  const [authOpen, setAuthOpen] = useState(() => fromLandingLogin() && (supabase !== null || !readSession()));
-  const [authMode, setAuthMode] = useState<'login' | 'register'>(() => (fromLandingLogin() ? 'login' : 'register'));
-  const [currentHash, setCurrentHash] = useState(() => window.location.hash || '#buscar');
+  const [currentHash, setCurrentHash] = useState(() => (fromLandingLogin() ? '#ingresar' : window.location.hash || '#buscar'));
   const [comparisonIds, setComparisonIds] = useState<string[]>(compareFromLanding);
   const [contactingProperty, setContactingProperty] = useState<Property | null>(null);
   // Perfil de transporte compartido: el total del mes es el mismo en catálogo, ficha y comparador
   const [transportProfileId, setTransportProfileId] = useState('standard');
-  const modalRef = useRef<HTMLDivElement>(null);
+  // A dónde volver después de entrar o crear la cuenta
+  const returnTo = useRef('#buscar');
 
   // Quitar ?ingresar y ?comparar de la dirección para que al recargar no se vuelvan a aplicar
   useEffect(() => {
     const url = new URL(window.location.href);
     if (!url.searchParams.has('ingresar') && !url.searchParams.has('comparar')) return;
+    if (url.searchParams.has('ingresar')) url.hash = '#ingresar';
     url.searchParams.delete('ingresar');
     url.searchParams.delete('comparar');
     window.history.replaceState(null, '', url.pathname + url.search + url.hash);
   }, []);
 
-  // Con cuentas de verdad, Supabase guarda la sesión; aquí solo se lee al entrar y se escuchan sus cambios
+  // Con cuentas de verdad, Supabase guarda la sesión; aquí solo se lee al entrar y se escuchan sus cambios.
+  // Con la cuenta local, la sesión ya se leyó del navegador.
   useEffect(() => {
-    if (!supabase) return;
+    if (!supabase) {
+      if (readSession()) leaveAuthIfOpen();
+      return;
+    }
     const auth = supabase.auth;
     const toUser = (email?: string) => (email ? { email } : null);
     auth.getSession().then(({ data }) => {
       setUser(toUser(data.session?.user.email));
-      if (data.session) setAuthOpen(false);
+      if (data.session) leaveAuthIfOpen();
     });
     const { data } = auth.onAuthStateChange((_event, session) => setUser(toUser(session?.user.email)));
     return () => data.subscription.unsubscribe();
   }, []);
 
-  // Escuchar cambios de hash para navegación (#buscar, #comparar o #privacidad)
+  // Escuchar cambios de hash para navegación entre vistas
   useEffect(() => {
     const onHashChange = () => {
       setCurrentHash(window.location.hash || '#buscar');
@@ -79,8 +100,9 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
 
-  // Al pasar del catálogo al comparador (o a la política de datos), y al volver, la página empieza arriba
-  const view = currentHash === '#comparar' ? 'comparar' : currentHash === '#privacidad' ? 'privacidad' : 'buscar';
+  // Al cambiar de vista (catálogo, comparador, política o cuenta), la página empieza arriba
+  const view = viewOf(currentHash);
+  const authView = isAuthView(view);
   const firstView = useRef(true);
   useEffect(() => {
     if (firstView.current) {
@@ -90,23 +112,27 @@ export default function App() {
     window.scrollTo(0, 0);
   }, [view]);
 
-  // Capa fija en vez de <dialog>: con showModal() Brave se cerraba al autocompletar el correo
-  useEffect(() => {
-    if (!authOpen) return;
-    const opener = document.activeElement as HTMLElement | null;
-    const onKeyDown = (e: KeyboardEvent) => e.key === 'Escape' && setAuthOpen(false);
+  const openedInApp = useRef(false);
+  const openAuth = () => {
+    returnTo.current = view === 'comparar' ? '#comparar' : '#buscar';
+    openedInApp.current = true;
+    window.location.hash = '#crear-cuenta';
+  };
 
-    modalRef.current?.querySelector('input')?.focus();
-    document.body.style.overflow = 'hidden';
-    window.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.body.style.overflow = '';
-      window.removeEventListener('keydown', onKeyDown);
-      opener?.focus();
-    };
-  }, [authOpen]);
+  // Al terminar, se reemplaza la pantalla de cuenta en el historial: "atrás" no vuelve al formulario
+  const handleAuthSuccess = (u: SessionUser) => {
+    setUser(u);
+    openedInApp.current = false;
+    window.location.replace(returnTo.current);
+  };
 
-  const closeAuth = () => setAuthOpen(false);
+  // "Volver" regresa a la página anterior si era de Wallex (el catálogo o la landing); si no, al catálogo
+  const leaveAuth = () => {
+    const fromWallex = openedInApp.current || document.referrer.startsWith(window.location.origin);
+    openedInApp.current = false;
+    if (fromWallex && window.history.length > 1) window.history.back();
+    else window.location.replace(returnTo.current);
+  };
 
   const handleLogout = () => {
     if (supabase) {
@@ -171,18 +197,11 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-paper">
-      <Navbar
-        user={user}
-        onLogout={handleLogout}
-        onLoginClick={() => {
-          setAuthMode('register');
-          setAuthOpen(true);
-        }}
-        links={navLinks}
-      />
+      {!authView && <Navbar user={user} onLogout={handleLogout} onLoginClick={openAuth} links={navLinks} />}
 
       <main className="flex-1">
-        {/* El catálogo sigue montado mientras se ve el comparador: al volver conserva sus filtros */}
+        {authView && <AuthScreen mode={view === 'ingresar' ? 'login' : 'register'} onSuccess={handleAuthSuccess} onBack={leaveAuth} />}
+        {/* El catálogo sigue montado mientras se ve otra vista: al volver conserva sus filtros */}
         {view === 'comparar' && (
           <PropertyComparer
             transportProfileId={transportProfileId}
@@ -213,44 +232,10 @@ export default function App() {
         </div>
       </main>
 
-      <Footer />
+      {!authView && <Footer />}
 
       {/* Verificación al contactar (simulada y declarada como tal) */}
       {contactingProperty && <ContactVerification property={contactingProperty} onClose={() => setContactingProperty(null)} />}
-
-      {/* Modal Auth */}
-      {authOpen && (
-        <div
-          onClick={(e) => e.target === e.currentTarget && closeAuth()}
-          className="fixed inset-0 z-50 bg-ink/55 flex items-center justify-center p-4 overflow-y-auto"
-        >
-          <div
-            ref={modalRef}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Ingresar o crear cuenta"
-            className="relative w-full max-w-md"
-          >
-            <AuthForm
-              initialMode={authMode}
-              onSuccess={(u) => {
-                setUser(u);
-                closeAuth();
-              }}
-            />
-            <button
-              type="button"
-              onClick={closeAuth}
-              aria-label="Cerrar"
-              className="absolute top-4 right-4 size-9 flex items-center justify-center rounded-full border border-rule text-ink hover:bg-paper"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -141,7 +141,7 @@ const Header: React.FC = () => {
           </nav>
         </div>
         <div className="flex items-center gap-4 sm:gap-5">
-          <a href="/?ingresar#buscar" className={`flex items-center gap-2 text-[15px] font-semibold rounded ${ring}`}>
+          <a href="/#ingresar" className={`flex items-center gap-2 text-[15px] font-semibold rounded ${ring}`}>
             <span
               aria-hidden="true"
               className={`hidden sm:grid place-items-center size-8 rounded-full transition-colors duration-300 ${t.bubble}`}

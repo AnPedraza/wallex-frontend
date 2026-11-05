@@ -259,6 +259,11 @@ Formas de documento: rectángulos con esquinas apenas redondeadas. 10 px en tarj
 ### Navigation
 - Barra blanca de 68 px, fija arriba, con un filete abajo. El logo va de 40 px con "Wallex" en 800. Las pestañas van a 15 px: la activa en tinta y 600 con subrayado verde de 2 px, las demás en tinta suave. El contador de elementos en el comparador es una píldora en tinta. Por debajo de 1024 px pasa a menú de hamburguesa.
 
+### Pantalla de cuenta
+- "Ingresar" de la landing (`/#ingresar`) e "Ingresar / Crear cuenta" de la barra (`/#crear-cuenta`) abren una pantalla propia: el logo, "Volver" y el formulario centrado sobre papel, sin la barra, el pie ni el catálogo detrás.
+- Al entrar o crear la cuenta se vuelve a donde estaba la persona (el catálogo conserva sus filtros), y la pantalla de cuenta sale del historial: "atrás" no regresa al formulario. Con sesión iniciada, esa pantalla manda al catálogo.
+- Con cuentas de Supabase, el registro pide la casilla de autorización de la Ley 1581 con enlace a la política de datos (`/#privacidad`).
+
 ### Control deslizante del total del mes (signature)
 Un `input range` nativo con riel de 4 px (tinta hasta el valor, filete después) y perilla blanca de 26 px con borde en tinta y una mini roseta verde adentro. Encima lleva un histograma de barras en tinta con cuántos inmuebles hay en cada tramo de $ 250.000; las barras por encima del tope se apagan. Al arrastrar, la perilla gira un poco.
 

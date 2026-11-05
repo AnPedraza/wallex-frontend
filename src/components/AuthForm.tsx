@@ -3,7 +3,7 @@ import type { AuthError } from '@supabase/supabase-js';
 import { serverAccounts } from '../lib/accounts';
 import { supabase } from '../lib/supabase';
 
-type AuthMode = 'login' | 'register';
+export type AuthMode = 'login' | 'register';
 type Status = 'idle' | 'loading' | 'success';
 
 interface AuthFormProps {
