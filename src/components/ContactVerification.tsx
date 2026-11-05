@@ -72,7 +72,8 @@ export const ContactVerification: React.FC<ContactVerificationProps> = ({ proper
               Verifica tu identidad para contactar
             </h2>
             <p className="text-sm text-ink-soft mt-2">
-              Se pide una sola vez. Después ves el contacto de quien publica <span className="font-semibold text-ink">{property.title}</span>.
+              Así quien publica sabe que eres una persona real, igual que el sello te dice a ti quién publica. Se pide una sola vez y después ves
+              el contacto de quien publica <span className="font-semibold text-ink">{property.title}</span>.
             </p>
 
             <div className="mt-5 flex items-start gap-3 border-y border-rule py-4">
