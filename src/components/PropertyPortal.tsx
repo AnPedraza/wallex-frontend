@@ -15,6 +15,8 @@ interface PropertyPortalProps {
   // Perfil de transporte compartido con el comparador (si no llega, se maneja aquí)
   transportProfileId?: string;
   onTransportProfileChange?: (id: string) => void;
+  // Los inmuebles del catálogo: los publicados en Wallex y los de ejemplo (si no llega, solo los de ejemplo)
+  properties?: Property[];
 }
 
 type SortKey = 'total-asc' | 'total-desc' | 'area-desc';
@@ -54,8 +56,8 @@ const folioOf = (p: Property) => sampleFolio(p.id, p.title, p.zone);
 
 const toDetail = (property: Property): DetailProperty => ({
   ...property,
-  images: [property.image],
-  description: `${property.title} ubicado en ${property.location}. ${property.transitAccess}.`,
+  images: property.images ?? [property.image],
+  description: property.description ?? `${property.title} ubicado en ${property.location}. ${property.transitAccess}.`,
   requiresCoSigner: property.requirements.guarantorRequired,
   requirements: [
     {
@@ -63,10 +65,9 @@ const toDetail = (property: Property): DetailProperty => ({
       required: property.requirements.guarantorRequired,
       detail: property.requirements.notes,
     },
-    {
-      label: `Demostración de ingresos de ${property.requirements.minIncomeMultiplier}x el valor de arriendo`,
-      required: true,
-    },
+    property.requirements.minIncomeMultiplier > 0
+      ? { label: `Demostración de ingresos de ${property.requirements.minIncomeMultiplier}x el valor de arriendo`, required: true }
+      : { label: 'Sin demostración de ingresos', required: false },
   ],
 });
 
@@ -92,6 +93,7 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
   onContactProperty,
   transportProfileId,
   onTransportProfileChange,
+  properties = INITIAL_PROPERTIES,
 }) => {
   const [zone, setZone] = useState(() => initialFilters().zone);
   const [maxTotal, setMaxTotal] = useState(() => initialFilters().maxTotal);
@@ -133,16 +135,16 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
   }, []);
 
   const multiplier = TRANSPORT_PROFILES.find((t) => t.id === transportId)?.multiplier ?? 1;
-  const zones = useMemo(() => Array.from(new Set(INITIAL_PROPERTIES.map((p) => p.zone))), []);
+  const zones = useMemo(() => Array.from(new Set(properties.map((p) => p.zone))).sort((a, b) => a.localeCompare(b, 'es')), [properties]);
 
   const withTotals = useMemo(
     () =>
-      INITIAL_PROPERTIES.map((p) => ({
+      properties.map((p) => ({
         property: p,
         transport: Math.round(p.estimatedTransportMonthly * multiplier),
         total: calculateTotalMonthlyCost(p, multiplier),
       })),
-    [multiplier]
+    [multiplier, properties]
   );
 
   // Todo menos el tope de precio: es lo que dibuja el histograma
@@ -189,7 +191,7 @@ export const PropertyPortal: React.FC<PropertyPortalProps> = ({
 
   const handleContactFromDetail = (property: DetailProperty) => {
     closeDetail();
-    const matched = INITIAL_PROPERTIES.find((p) => p.id === property.id);
+    const matched = properties.find((p) => p.id === property.id);
     if (matched) handleContact(matched);
   };
 

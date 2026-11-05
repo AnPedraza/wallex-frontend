@@ -1,17 +1,19 @@
 import React, { useEffect, useRef } from 'react';
 import logo from '../assets/wallex-logo.png';
+import type { Role, SessionUser } from '../types/account';
 import { AuthForm, type AuthMode } from './AuthForm';
 
 interface AuthScreenProps {
   mode: AuthMode;
-  onSuccess: (user: { email: string }) => void;
+  initialRole?: Role; // "Crear cuenta para publicar" llega con "Quiero publicar" marcado
+  onSuccess: (user: SessionUser) => void;
   onBack: () => void;
 }
 
 const focusRing = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink';
 
 // Pantalla propia para entrar o crear la cuenta: solo el formulario, sin el catálogo detrás
-export const AuthScreen: React.FC<AuthScreenProps> = ({ mode, onSuccess, onBack }) => {
+export const AuthScreen: React.FC<AuthScreenProps> = ({ mode, initialRole, onSuccess, onBack }) => {
   const formRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -43,7 +45,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ mode, onSuccess, onBack 
       </header>
 
       <div ref={formRef} className="flex-1 flex justify-center items-start sm:items-center px-4 pt-6 pb-16">
-        <AuthForm key={mode} initialMode={mode} onSuccess={onSuccess} />
+        <AuthForm key={`${mode}-${initialRole ?? ''}`} initialMode={mode} initialRole={initialRole} onSuccess={onSuccess} />
       </div>
     </div>
   );

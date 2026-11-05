@@ -1,3 +1,5 @@
+import type { PublisherType } from './account';
+
 export interface PropertyRequirements {
   guarantorRequired: boolean; // ¿Exige codeudor con finca raíz tradicional?
   minIncomeMultiplier: number; // Múltiplo de ingresos mínimos requeridos (ej. 2x o 2.5x el valor de arriendo)
@@ -27,6 +29,10 @@ export interface Property {
   image: string;
   requirements: PropertyRequirements;
   features?: string[];
+  // Solo en lo que publica gente real en Wallex (los inmuebles de ejemplo no los traen)
+  images?: string[]; // todas las fotos; image es la portada
+  description?: string; // lo que escribe quien publica
+  publisherType?: PublisherType;
 }
 
 export interface TransportProfile {

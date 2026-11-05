@@ -1,17 +1,33 @@
-import React, { useEffect, useId, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { fetchContact, type ListingContact } from '../lib/listings';
 import type { Property } from '../types/property';
 import { FolioSeal } from './FolioSeal';
 
 interface ContactVerificationProps {
   property: Property;
   onClose: () => void;
+  signedIn?: boolean; // lo publicado en Wallex solo muestra el contacto a quien tiene cuenta
+  onSignIn?: () => void;
 }
+
+const celularText = (c: string) => `${c.slice(0, 3)} ${c.slice(3, 6)} ${c.slice(6)}`;
+
+const unverifiedWarning = (
+  <p className="text-sm">
+    <span className="font-semibold text-unverified">Quien publica no ha verificado su identidad.</span>{' '}
+    <span className="text-ink-soft">No consignes dinero para "separar" el inmueble antes de verlo en persona.</span>
+  </p>
+);
 
 // Verificación de identidad al contactar (US-02). Es una simulación: no se toma ninguna foto,
 // no se guarda nada y no se envía ningún correo. La pantalla lo dice tal cual.
-export const ContactVerification: React.FC<ContactVerificationProps> = ({ property, onClose }) => {
+// En lo publicado por gente real, al final se muestra el contacto de verdad de quien publica.
+export const ContactVerification: React.FC<ContactVerificationProps> = ({ property, onClose, signedIn = false, onSignIn }) => {
   const [step, setStep] = useState<'consent' | 'done'>('consent');
   const [consent, setConsent] = useState(false);
+  const real = Boolean(property.publisherType);
+  const [contact, setContact] = useState<ListingContact | null>(null);
+  const [contactState, setContactState] = useState<'loading' | 'ready' | 'error'>('loading');
   const panelRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   useEffect(() => {
@@ -28,6 +44,21 @@ export const ContactVerification: React.FC<ContactVerificationProps> = ({ proper
   useEffect(() => {
     if (step === 'done') panelRef.current?.querySelector<HTMLElement>('button[data-autofocus]')?.focus();
   }, [step]);
+
+  // Solo cambia el estado cuando llega la respuesta (el "cargando" ya es el estado inicial)
+  const loadContact = useCallback(() => {
+    fetchContact(property.id)
+      .then((c) => {
+        setContact(c);
+        setContactState(c ? 'ready' : 'error');
+      })
+      .catch(() => setContactState('error'));
+  }, [property.id]);
+
+  // Con la verificación terminada, se trae el contacto de lo publicado en Wallex
+  useEffect(() => {
+    if (step === 'done' && real) loadContact();
+  }, [step, real, loadContact]);
 
   // Escape cierra, se bloquea el scroll de fondo y el foco vuelve al botón que abrió el modal
   useEffect(() => {
@@ -66,7 +97,29 @@ export const ContactVerification: React.FC<ContactVerificationProps> = ({ proper
           </svg>
         </button>
 
-        {step === 'consent' ? (
+        {real && !signedIn ? (
+          <>
+            <h2 id={titleId} className="text-[21px] sm:text-[28px] font-extrabold tracking-[-0.02em] leading-tight pr-10">
+              Entra a tu cuenta para ver el contacto
+            </h2>
+            <p className="text-sm text-ink-soft mt-2">
+              El nombre y el celular de quien publica <span className="font-semibold text-ink">{property.title}</span> solo los ven las
+              personas con cuenta en Wallex. Crearla toma menos de un minuto.
+            </p>
+            <div className="mt-5 flex items-start gap-3 border-y border-rule py-4">
+              <FolioSeal seed={property.id} status="unverified" size={40} />
+              {unverifiedWarning}
+            </div>
+            <button
+              type="button"
+              data-autofocus
+              onClick={onSignIn}
+              className="mt-5 w-full bg-ink text-white font-semibold text-sm py-3 rounded-lg hover:bg-ink-hover"
+            >
+              Ingresar o crear cuenta
+            </button>
+          </>
+        ) : step === 'consent' ? (
           <>
             <h2 id={titleId} className="text-[21px] sm:text-[28px] font-extrabold tracking-[-0.02em] leading-tight pr-10">
               Verifica tu identidad para contactar
@@ -86,10 +139,7 @@ export const ContactVerification: React.FC<ContactVerificationProps> = ({ proper
                   </span>
                 </p>
               ) : (
-                <p className="text-sm">
-                  <span className="font-semibold text-unverified">Quien publica no ha verificado su identidad.</span>{' '}
-                  <span className="text-ink-soft">No consignes dinero para "separar" el inmueble antes de verlo en persona.</span>
-                </p>
+                unverifiedWarning
               )}
             </div>
 
@@ -138,6 +188,67 @@ export const ContactVerification: React.FC<ContactVerificationProps> = ({ proper
               {consent ? 'Tarda unos segundos en la versión real.' : 'Marca la autorización para continuar.'}
             </p>
           </>
+        ) : real ? (
+          <div role="status">
+            <h2 id={titleId} className="text-[21px] sm:text-[28px] font-extrabold tracking-[-0.02em] leading-tight pr-10">
+              El contacto de quien publica
+            </h2>
+            <p className="text-[12.5px] text-ink-faint mt-2">
+              Por ahora la verificación es simulada: no se tomó ninguna foto ni se guardó tu información.
+            </p>
+            {contactState === 'loading' && <p className="mt-5 text-sm text-ink-soft">Buscando el contacto…</p>}
+            {contactState === 'error' && (
+              <div className="mt-5">
+                <p className="text-sm text-unverified">No pudimos traer el contacto. Revisa tu conexión e inténtalo de nuevo.</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setContactState('loading');
+                    loadContact();
+                  }}
+                  className="mt-3 px-4 py-2 rounded-lg border border-control text-sm font-semibold hover:bg-paper"
+                >
+                  Intentar de nuevo
+                </button>
+              </div>
+            )}
+            {contactState === 'ready' && contact && (
+              <>
+                <dl className="mt-5 divide-y divide-rule border-y border-rule text-sm">
+                  <div className="flex justify-between gap-4 py-3">
+                    <dt className="text-ink-soft">Nombre</dt>
+                    <dd className="font-semibold text-right">{contact.nombre}</dd>
+                  </div>
+                  <div className="flex justify-between gap-4 py-3">
+                    <dt className="text-ink-soft">Celular</dt>
+                    <dd className="font-semibold">{celularText(contact.celular)}</dd>
+                  </div>
+                </dl>
+                <div className="mt-5 grid grid-cols-2 gap-2.5">
+                  <a
+                    href={`https://wa.me/57${contact.celular}?text=${encodeURIComponent(`Hola, vi tu arriendo "${property.title}" en Wallex.`)}`}
+                    target="_blank"
+                    rel="noopener"
+                    className="text-center bg-ink text-white font-semibold text-sm py-3 rounded-lg hover:bg-ink-hover"
+                  >
+                    Escribir por WhatsApp
+                  </a>
+                  <a href={`tel:+57${contact.celular}`} className="text-center border border-control font-semibold text-sm py-3 rounded-lg hover:bg-paper">
+                    Llamar
+                  </a>
+                </div>
+              </>
+            )}
+            <div className="mt-5">{unverifiedWarning}</div>
+            <button
+              type="button"
+              data-autofocus
+              onClick={onClose}
+              className="mt-6 w-full border border-control font-semibold text-sm py-3 rounded-lg hover:bg-paper"
+            >
+              Cerrar
+            </button>
+          </div>
         ) : (
           <div role="status" className="text-center">
             <div className="flex justify-center">
