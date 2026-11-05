@@ -228,8 +228,9 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({ property, onClos
             </section>
           </div>
 
-          <div className="sticky bottom-0 lg:static shrink-0 border-t border-rule bg-surface px-5 sm:px-7 py-4 flex items-center gap-5">
-            <div className="hidden sm:block">
+          {/* El total va en la barra fija también en celular: se ve apenas se abre la ficha */}
+          <div className="sticky bottom-0 lg:static shrink-0 border-t border-rule bg-surface px-5 sm:px-7 py-4 flex items-center gap-4 sm:gap-5">
+            <div className="shrink-0">
               <p className="text-[12.5px] text-ink-soft">Total del mes</p>
               <p className="text-lg font-extrabold tracking-[-0.01em]">{cop(monthTotal)}</p>
             </div>
