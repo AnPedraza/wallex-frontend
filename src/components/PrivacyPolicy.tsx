@@ -23,15 +23,19 @@ const sections: { title: string; body: React.ReactNode }[] = [
   },
   {
     title: 'Qué guardamos',
-    body: 'Tu correo y tu contraseña, para crear tu cuenta y que puedas entrar desde cualquier dispositivo. La contraseña se guarda protegida: nadie del equipo la puede ver. No pedimos cédula, fotos ni datos de pago; la verificación de identidad que ves al contactar es simulada y no guarda nada.',
+    body: 'Tu nombre, tu correo, tu contraseña y si buscas arriendo o publicas. Si publicas, también cómo publicas (propietario, inmobiliaria o arrendatario que cede el contrato), tu celular, los datos de tus arriendos y sus fotos. Si buscas, los arriendos que guardes como favoritos. La contraseña se guarda protegida: nadie del equipo la puede ver. No pedimos cédula, selfie ni datos de pago; la verificación de identidad que ves al contactar es simulada y no guarda nada.',
+  },
+  {
+    title: 'Quién ve qué',
+    body: 'Tus arriendos publicados y sus fotos los puede ver cualquiera. Tu nombre y tu celular de contacto solo los ven las personas con cuenta en Wallex, para escribirte por uno de tus arriendos. Tus favoritos y los demás datos de tu cuenta solo los ves tú.',
   },
   {
     title: 'Para qué los usamos',
-    body: 'Solo para manejar tu cuenta. No vendemos tus datos ni los compartimos con nadie.',
+    body: 'Para manejar tu cuenta, mostrar tus arriendos y que te puedan contactar por ellos. No vendemos tus datos ni los compartimos con nadie.',
   },
   {
     title: 'Dónde se guardan',
-    body: 'En Supabase, el servicio que usamos para las cuentas, con servidores en Estados Unidos.',
+    body: 'En Supabase, el servicio que usamos para las cuentas, los arriendos publicados y sus fotos, con servidores en Estados Unidos.',
   },
   {
     title: 'Tus derechos',

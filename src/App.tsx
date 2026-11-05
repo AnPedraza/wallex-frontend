@@ -9,12 +9,10 @@ import { PrivacyPolicy } from './components/PrivacyPolicy';
 import { PropertyPortal } from './components/PropertyPortal';
 import { PropertyComparer } from './components/PropertyComparer';
 import { INITIAL_PROPERTIES } from './data/mockProperties';
+import { userFromMetadata } from './lib/accounts';
 import { supabase } from './lib/supabase';
+import type { SessionUser } from './types/account';
 import type { Property } from './types/property';
-
-interface SessionUser {
-  email: string;
-}
 
 // Sesión simulada en localStorage (ver AuthForm). Con Supabase, la sesión la guarda Supabase.
 const readSession = (): SessionUser | null => {
@@ -22,7 +20,7 @@ const readSession = (): SessionUser | null => {
     const raw = localStorage.getItem(SESSION_KEY);
     const parsed: unknown = raw ? JSON.parse(raw) : null;
     if (parsed && typeof parsed === 'object' && 'email' in parsed && typeof parsed.email === 'string') {
-      return { email: parsed.email };
+      return userFromMetadata(parsed.email, parsed as Record<string, unknown>);
     }
   } catch {
     // Sin acceso a localStorage se sigue sin sesión
@@ -82,12 +80,14 @@ export default function App() {
       return;
     }
     const auth = supabase.auth;
-    const toUser = (email?: string) => (email ? { email } : null);
+    type Session = { user: { email?: string; user_metadata?: Record<string, unknown> } } | null;
+    const toUser = (session: Session) =>
+      session?.user.email ? userFromMetadata(session.user.email, session.user.user_metadata) : null;
     auth.getSession().then(({ data }) => {
-      setUser(toUser(data.session?.user.email));
+      setUser(toUser(data.session));
       if (data.session) leaveAuthIfOpen();
     });
-    const { data } = auth.onAuthStateChange((_event, session) => setUser(toUser(session?.user.email)));
+    const { data } = auth.onAuthStateChange((_event, session) => setUser(toUser(session)));
     return () => data.subscription.unsubscribe();
   }, []);
 

@@ -8,7 +8,7 @@ export interface NavLink {
 }
 
 interface NavbarProps {
-  user?: { email: string } | null;
+  user?: { email: string; nombre?: string } | null;
   onLogout?: () => void;
   onLoginClick?: () => void;
   links?: NavLink[];
@@ -98,7 +98,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {user ? (
             <div className="ml-auto flex items-center gap-3">
               <span className="text-sm text-ink-soft max-w-[16rem] truncate" title={user.email}>
-                {user.email}
+                {user.nombre || user.email}
               </span>
               <button
                 type="button"
@@ -122,7 +122,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Celular: con sesión, el correo queda a la vista junto al menú */}
         {user && (
           <span className="lg:hidden ml-auto -mr-3 min-w-0 max-w-[10rem] truncate text-[13px] text-ink-soft" title={user.email}>
-            {user.email}
+            {user.nombre || user.email}
           </span>
         )}
         <button
@@ -161,7 +161,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {user ? (
               <div className="flex items-center justify-between gap-3">
                 <span className="text-sm text-ink-soft truncate" title={user.email}>
-                  {user.email}
+                  {user.nombre || user.email}
                 </span>
                 <button
                   type="button"

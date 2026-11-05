@@ -1,17 +1,23 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import type { AuthError } from '@supabase/supabase-js';
-import { serverAccounts } from '../lib/accounts';
+import { serverAccounts, userFromMetadata } from '../lib/accounts';
 import { supabase } from '../lib/supabase';
+import { PUBLISHER_TYPES, type PublisherType, type Role, type SessionUser } from '../types/account';
 
 export type AuthMode = 'login' | 'register';
 type Status = 'idle' | 'loading' | 'success';
 
 interface AuthFormProps {
   initialMode?: AuthMode;
-  onSuccess?: (user: { email: string }) => void;
+  initialRole?: Role;
+  onSuccess?: (user: SessionUser) => void;
 }
 
 interface FieldErrors {
+  rol?: string;
+  nombre?: string;
+  tipo?: string;
+  celular?: string;
   email?: string;
   password?: string;
 }
@@ -19,15 +25,25 @@ interface FieldErrors {
 interface StoredUser {
   salt: string;
   hash: string;
+  nombre?: string;
+  rol?: Role;
+  tipoAnunciante?: PublisherType;
+  celular?: string;
 }
 
-// Con las variables de Supabase, la cuenta es de verdad: Supabase guarda el correo y la contraseña protegida.
-// Sin ellas, la cuenta es simulada y vive en el localStorage de este navegador: el correo y un hash SHA-256
-// con sal, nunca la contraseña.
+// Con las variables de Supabase, la cuenta es de verdad: Supabase guarda el correo y la contraseña protegida,
+// y los datos del registro van con la cuenta. Sin ellas, la cuenta es simulada y vive en el localStorage
+// de este navegador: el correo, los datos del registro y un hash SHA-256 con sal, nunca la contraseña.
 const USERS_KEY = 'wallex.users';
 export const SESSION_KEY = 'wallex.session';
 const MIN_PASSWORD = 8;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const CELULAR_PATTERN = /^3\d{9}$/;
+
+const ROLES: { id: Role; title: string; body: string }[] = [
+  { id: 'busca', title: 'Busco arriendo', body: 'Filtra, compara y guarda tus favoritos.' },
+  { id: 'publica', title: 'Quiero publicar', body: 'Publica tu arriendo con la ficha completa.' },
+];
 
 const toHex = (bytes: Uint8Array) =>
   Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
@@ -47,6 +63,8 @@ const readUsers = (): Record<string, StoredUser> => {
   }
 };
 
+const digitsOf = (value: string) => value.replace(/\D/g, '');
+
 const validateEmail = (email: string) => {
   if (!email) return 'Escribe tu correo, por ejemplo nombre@correo.com.';
   if (!EMAIL_PATTERN.test(email))
@@ -62,6 +80,19 @@ const validatePassword = (password: string, mode: AuthMode) => {
       missing === 1 ? 'falta 1' : `faltan ${missing}`
     }.`;
   }
+  return undefined;
+};
+
+const validateName = (nombre: string) => {
+  if (!nombre.trim()) return 'Escribe tu nombre, como quieres que te vean.';
+  if (nombre.trim().length < 2) return 'Tu nombre debe tener al menos 2 letras.';
+  return undefined;
+};
+
+const validateCelular = (celular: string) => {
+  const digits = digitsOf(celular);
+  if (!digits) return 'Escribe tu celular, para que te puedan contactar por tus arriendos.';
+  if (!CELULAR_PATTERN.test(digits)) return 'Revisa el celular: son 10 dígitos y empieza por 3, por ejemplo 3001234567.';
   return undefined;
 };
 
@@ -95,9 +126,15 @@ const inputClass = (hasError: boolean) =>
   `w-full bg-paper border rounded-lg p-3 text-sm text-ink focus:outline-none focus:ring-2 ${
     hasError ? 'border-unverified focus:ring-unverified' : 'border-control focus:ring-ink'
   }`;
+const labelClass = 'block text-sm font-semibold mb-2 text-ink-soft';
+const errorClass = 'mt-1.5 text-xs text-unverified';
 
-export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'register', onSuccess }) => {
+export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'register', initialRole, onSuccess }) => {
   const [mode, setMode] = useState<AuthMode>(initialMode);
+  const [role, setRole] = useState<Role | null>(initialRole ?? null);
+  const [nombre, setNombre] = useState('');
+  const [tipo, setTipo] = useState<PublisherType | ''>('');
+  const [celular, setCelular] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -107,7 +144,12 @@ export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'register', on
   const [consent, setConsent] = useState(false);
   const [consentError, setConsentError] = useState('');
   const [status, setStatus] = useState<Status>('idle');
+  const [doneUser, setDoneUser] = useState<SessionUser | null>(null);
 
+  const roleRef = useRef<HTMLInputElement>(null);
+  const nombreRef = useRef<HTMLInputElement>(null);
+  const tipoRef = useRef<HTMLSelectElement>(null);
+  const celularRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
   const consentRef = useRef<HTMLInputElement>(null);
@@ -115,11 +157,15 @@ export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'register', on
 
   const ids = useId();
   const titleId = `${ids}-title`;
+  const nombreId = `${ids}-nombre`;
+  const tipoId = `${ids}-tipo`;
+  const celularId = `${ids}-celular`;
   const emailId = `${ids}-email`;
   const passwordId = `${ids}-password`;
   const consentId = `${ids}-consent`;
 
   const isRegister = mode === 'register';
+  const publishes = isRegister && role === 'publica';
   const normalizedEmail = email.trim().toLowerCase();
 
   useEffect(() => () => window.clearTimeout(successTimer.current), []);
@@ -133,36 +179,81 @@ export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'register', on
     setPassword('');
   };
 
-  const finish = () => {
+  const finish = (user: SessionUser) => {
+    setDoneUser(user);
     setStatus('success');
     // Pausa corta para que se alcance a leer el mensaje de éxito
-    successTimer.current = window.setTimeout(() => onSuccess?.({ email: normalizedEmail }), 900);
+    successTimer.current = window.setTimeout(() => onSuccess?.(user), 900);
+  };
+
+  // Lo que se pide en el registro, revisado en el mismo orden en que aparece
+  const validate = (): [FieldErrors, React.RefObject<HTMLElement | null> | null] => {
+    const next: FieldErrors = {};
+    if (isRegister) {
+      if (!role) next.rol = 'Elige si buscas arriendo o quieres publicar.';
+      next.nombre = validateName(nombre);
+      if (role === 'publica') {
+        if (!tipo) next.tipo = 'Elige si publicas como propietario, inmobiliaria o arrendatario.';
+        next.celular = validateCelular(celular);
+      }
+    }
+    next.email = validateEmail(normalizedEmail);
+    next.password = validatePassword(password, mode);
+    const first = next.rol
+      ? roleRef
+      : next.nombre
+        ? nombreRef
+        : next.tipo
+          ? tipoRef
+          : next.celular
+            ? celularRef
+            : next.email
+              ? emailRef
+              : next.password
+                ? passwordRef
+                : null;
+    return [next, first];
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (status !== 'idle') return;
 
-    const nextErrors: FieldErrors = {
-      email: validateEmail(normalizedEmail),
-      password: validatePassword(password, mode),
-    };
+    const [nextErrors, firstInvalid] = validate();
     setErrors(nextErrors);
     setFormError('');
     setNotice('');
-    if (nextErrors.email) return emailRef.current?.focus();
-    if (nextErrors.password) return passwordRef.current?.focus();
-    // Con cuentas de verdad el correo sale del navegador: la Ley 1581 pide la autorización antes
+    if (firstInvalid) return firstInvalid.current?.focus();
+    // Con cuentas de verdad los datos salen del navegador: la Ley 1581 pide la autorización antes
     if (isRegister && serverAccounts && !consent) {
       setConsentError('Marca la autorización para crear la cuenta.');
       return consentRef.current?.focus();
     }
 
+    const profile: SessionUser = {
+      email: normalizedEmail,
+      nombre: nombre.trim(),
+      rol: role ?? 'busca',
+      tipoAnunciante: publishes && tipo ? tipo : undefined,
+      celular: publishes ? digitsOf(celular) : undefined,
+    };
+
     if (supabase) {
       setStatus('loading');
       try {
         const { data, error } = isRegister
-          ? await supabase.auth.signUp({ email: normalizedEmail, password })
+          ? await supabase.auth.signUp({
+              email: normalizedEmail,
+              password,
+              options: {
+                data: {
+                  nombre: profile.nombre,
+                  rol: profile.rol,
+                  tipo_anunciante: profile.tipoAnunciante ?? null,
+                  celular: profile.celular ?? null,
+                },
+              },
+            })
           : await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
         if (error) {
           setFormError(serverMessage(error, isRegister));
@@ -175,7 +266,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'register', on
           setStatus('idle');
           return;
         }
-        finish();
+        finish(isRegister ? profile : userFromMetadata(normalizedEmail, data.session.user.user_metadata));
       } catch {
         setFormError('No pudimos conectarnos. Revisa tu internet e inténtalo de nuevo.');
         setStatus('idle');
@@ -192,6 +283,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'register', on
     try {
       const users = readUsers();
       const existing = users[normalizedEmail];
+      let user: SessionUser = profile;
 
       if (isRegister) {
         if (existing) {
@@ -200,7 +292,14 @@ export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'register', on
           return;
         }
         const salt = toHex(crypto.getRandomValues(new Uint8Array(16)));
-        users[normalizedEmail] = { salt, hash: await hashPassword(password, salt) };
+        users[normalizedEmail] = {
+          salt,
+          hash: await hashPassword(password, salt),
+          nombre: profile.nombre,
+          rol: profile.rol,
+          tipoAnunciante: profile.tipoAnunciante,
+          celular: profile.celular,
+        };
         localStorage.setItem(USERS_KEY, JSON.stringify(users));
       } else {
         if (!existing) {
@@ -214,10 +313,17 @@ export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'register', on
           passwordRef.current?.focus();
           return;
         }
+        user = {
+          email: normalizedEmail,
+          nombre: existing.nombre,
+          rol: existing.rol,
+          tipoAnunciante: existing.tipoAnunciante,
+          celular: existing.celular,
+        };
       }
 
-      localStorage.setItem(SESSION_KEY, JSON.stringify({ email: normalizedEmail }));
-      finish();
+      localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+      finish(user);
     } catch {
       setFormError('No pudimos guardar tus datos en este navegador. Revisa que no esté en modo privado e inténtalo de nuevo.');
       setStatus('idle');
@@ -239,13 +345,14 @@ export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'register', on
           {isRegister ? '¡Listo, ya tienes tu cuenta!' : '¡Hola de nuevo!'}
         </h2>
         <p className="text-sm text-ink-soft">
-          Entraste como <strong className="text-ink break-all">{normalizedEmail}</strong>.
+          Entraste como <strong className="text-ink break-all">{doneUser?.nombre || normalizedEmail}</strong>.
         </p>
       </div>
     );
   }
 
   const loading = status === 'loading';
+  const clear = (field: keyof FieldErrors) => errors[field] && setErrors((prev) => ({ ...prev, [field]: undefined }));
 
   return (
     <form
@@ -260,14 +367,142 @@ export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'register', on
         </h2>
         {isRegister && (
           <p className="text-sm text-ink-soft">
-            Solo necesitas tu correo y una contraseña. Verificas tu identidad más adelante, cuando
-            quieras escribirle a un propietario.
+            Para registrarte no te pedimos cédula ni selfie. Verificas tu identidad más adelante, cuando haga falta.
           </p>
         )}
       </div>
 
+      {isRegister && (
+        <>
+          <fieldset>
+            <legend className={labelClass}>¿Qué quieres hacer en Wallex?</legend>
+            <div className="grid grid-cols-2 gap-2.5">
+              {ROLES.map((r, i) => (
+                <label
+                  key={r.id}
+                  className={`flex flex-col gap-0.5 rounded-lg border p-3 cursor-pointer transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ink ${
+                    role === r.id ? 'border-ink bg-paper' : errors.rol ? 'border-unverified' : 'border-control hover:border-ink'
+                  }`}
+                >
+                  <input
+                    ref={i === 0 ? roleRef : undefined}
+                    type="radio"
+                    name={`${ids}-rol`}
+                    value={r.id}
+                    checked={role === r.id}
+                    onChange={() => {
+                      setRole(r.id);
+                      clear('rol');
+                    }}
+                    aria-describedby={errors.rol ? `${ids}-rol-error` : undefined}
+                    className="sr-only"
+                  />
+                  <span className="text-sm font-semibold text-ink">{r.title}</span>
+                  <span className="text-xs text-ink-soft">{r.body}</span>
+                </label>
+              ))}
+            </div>
+            {errors.rol && (
+              <p id={`${ids}-rol-error`} className={errorClass}>
+                {errors.rol}
+              </p>
+            )}
+          </fieldset>
+
+          <div>
+            <label htmlFor={nombreId} className={labelClass}>
+              Tu nombre
+            </label>
+            <input
+              ref={nombreRef}
+              id={nombreId}
+              type="text"
+              autoComplete="name"
+              value={nombre}
+              onChange={(e) => {
+                setNombre(e.target.value);
+                if (errors.nombre) setErrors((prev) => ({ ...prev, nombre: validateName(e.target.value) }));
+              }}
+              aria-invalid={Boolean(errors.nombre)}
+              aria-describedby={errors.nombre ? `${nombreId}-error` : undefined}
+              placeholder="Nombre y apellido"
+              className={inputClass(Boolean(errors.nombre))}
+            />
+            {errors.nombre && (
+              <p id={`${nombreId}-error`} className={errorClass}>
+                {errors.nombre}
+              </p>
+            )}
+          </div>
+
+          {publishes && (
+            <>
+              <div>
+                <label htmlFor={tipoId} className={labelClass}>
+                  Publicas como
+                </label>
+                <select
+                  ref={tipoRef}
+                  id={tipoId}
+                  value={tipo}
+                  onChange={(e) => {
+                    setTipo(e.target.value as PublisherType | '');
+                    clear('tipo');
+                  }}
+                  aria-invalid={Boolean(errors.tipo)}
+                  aria-describedby={errors.tipo ? `${tipoId}-error` : undefined}
+                  className={inputClass(Boolean(errors.tipo))}
+                >
+                  <option value="">Elige una opción</option>
+                  {PUBLISHER_TYPES.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+                {errors.tipo && (
+                  <p id={`${tipoId}-error`} className={errorClass}>
+                    {errors.tipo}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor={celularId} className={labelClass}>
+                  Celular
+                </label>
+                <input
+                  ref={celularRef}
+                  id={celularId}
+                  type="tel"
+                  inputMode="numeric"
+                  autoComplete="tel-national"
+                  value={celular}
+                  onChange={(e) => {
+                    setCelular(e.target.value);
+                    if (errors.celular) setErrors((prev) => ({ ...prev, celular: validateCelular(e.target.value) }));
+                  }}
+                  aria-invalid={Boolean(errors.celular)}
+                  aria-describedby={`${celularId}-hint${errors.celular ? ` ${celularId}-error` : ''}`}
+                  placeholder="3001234567"
+                  className={inputClass(Boolean(errors.celular))}
+                />
+                <p id={`${celularId}-hint`} className="mt-1.5 text-xs text-ink-soft">
+                  Lo verán las personas con cuenta que quieran contactarte por tus arriendos.
+                </p>
+                {errors.celular && (
+                  <p id={`${celularId}-error`} className="mt-1 text-xs text-unverified">
+                    {errors.celular}
+                  </p>
+                )}
+              </div>
+            </>
+          )}
+        </>
+      )}
+
       <div>
-        <label htmlFor={emailId} className="block text-sm font-semibold mb-2 text-ink-soft">
+        <label htmlFor={emailId} className={labelClass}>
           Correo electrónico
         </label>
         <input
@@ -288,14 +523,14 @@ export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'register', on
           className={inputClass(Boolean(errors.email))}
         />
         {errors.email && (
-          <p id={`${emailId}-error`} className="mt-1.5 text-xs text-unverified">
+          <p id={`${emailId}-error`} className={errorClass}>
             {errors.email}
           </p>
         )}
       </div>
 
       <div>
-        <label htmlFor={passwordId} className="block text-sm font-semibold mb-2 text-ink-soft">
+        <label htmlFor={passwordId} className={labelClass}>
           Contraseña
         </label>
         <div className="relative">
@@ -354,7 +589,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'register', on
               className="mt-0.5 size-4 accent-ink shrink-0 cursor-pointer"
             />
             <span>
-              Autorizo que Wallex guarde mi correo para crear y manejar mi cuenta, según la{' '}
+              Autorizo que Wallex trate mis datos para crear y manejar mi cuenta, según la{' '}
               <a href="/#privacidad" target="_blank" rel="noopener" className="font-semibold text-ink underline underline-offset-2">
                 política de datos
               </a>{' '}
@@ -362,7 +597,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'register', on
             </span>
           </label>
           {consentError && (
-            <p id={`${consentId}-error`} className="mt-1.5 text-xs text-unverified">
+            <p id={`${consentId}-error`} className={errorClass}>
               {consentError}
             </p>
           )}
