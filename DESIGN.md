@@ -305,9 +305,9 @@ El orden de la columna del folio es fijo: lugar, título (28 px, 800), metadatos
 - **Orden fijo:** el inmueble, lo que se paga, lo que pides, cómo se llega, fotos, descripción y quién publica, separados por filetes en una sola tarjeta blanca. Es el mismo orden de la ficha.
 - **Lo que se paga** muestra en vivo el total del mes como lo verá quien busca: canon, administración y un transporte estimado de $ 156.200 (2 pasajes al día, 22 días hábiles).
 - **Fotos:** de 1 a 8, en JPG, PNG o WebP. Se achican en el navegador a 1600 px y se suben en JPEG. La primera es la portada; las demás tienen «Hacer portada» y una X para quitarlas. En celular van de a dos.
-- **Quién publica** viene lleno con los datos del registro. El celular lo ven solo las personas con cuenta.
-- **Honestidad:** lo publicado sale «Sin verificar» mientras la verificación de identidad sea simulada. El formulario lo dice antes de publicar.
-- **Mis publicaciones** (`#mis-publicaciones`) lista cada arriendo con foto, estado, fecha y total del mes, y deja pausar, volver a publicar o borrar (con confirmación, porque también borra las fotos).
+- **Quién publica** viene lleno con los datos del registro. El celular lo ven solo las personas con cuenta; con Didit encendido, solo las que verificaron su identidad.
+- **Honestidad:** lo publicado sale «Sin verificar» hasta que quien publica se verifica con Didit; ahí pasa a «Tradición pendiente de cotejo», porque el certificado no se revisa. Nunca lleva folio: el folio de ejemplo es solo para los inmuebles de ejemplo. El formulario dice cuál de los dos sellos va a tener.
+- **Mis publicaciones** (`#mis-publicaciones`) lista cada arriendo con foto, estado, fecha y total del mes, y deja pausar, volver a publicar o borrar (con confirmación, porque también borra las fotos). Con Didit encendido, arriba va la identidad de quien publica: verificada (con su sello), en revisión, o un panel para verificarse que se abre con «Verificar mi identidad».
 - **La barra** nunca pasa de tres enlaces: quien publica ve «Mis publicaciones» y los demás, «Publicar arriendo».
 
 ### Verificación al contactar
@@ -316,6 +316,14 @@ Modal de dos pasos (`ContactVerification`), con fondo en tinta al 55 %:
 2. **Confirmación.** Muestra el sello verificado a 76 px y dice que es una simulación y que no se envía ningún correo.
 
 En lo publicado por personas reales, sin sesión el modal pide entrar a la cuenta. Con sesión, al terminar muestra el nombre y el celular de quien publica, con «Escribir por WhatsApp» y «Llamar», y repite que no se consigne dinero antes de ver el inmueble.
+
+**Con Didit** (`VITE_VERIFICACION=didit`) la verificación es de verdad y se hace una sola vez:
+- Sin sesión, siempre pide entrar a la cuenta, también en los inmuebles de ejemplo.
+- La autorización (`IdentityConsent`) dice que lo hace Didit en su propia página, que el rostro es un dato sensible y que autorizarlo es opcional, y que Wallex guarda solo el resultado. El botón lleva a Didit; mientras abre dice «Abriendo la verificación…» y, si falla, qué hacer.
+- Al volver de Didit el modal se abre solo con el resultado. Hay un estado para cada caso: revisando, en revisión (lo revisa el equipo en la consola de Didit), rechazada (con «Intentar de nuevo»), vencida o sin terminar.
+- Con la identidad aprobada se ve el contacto de una vez. En los inmuebles de ejemplo dice que no tienen un contacto real.
+- Si se termina en el celular sin sesión abierta, un aviso dice que el resultado se ve en la ventana donde se empezó.
+- La capa del modal se desplaza: con contenido alto, el modal nunca queda cortado por arriba.
 
 La regla que manda: la pantalla nunca afirma algo que el prototipo no hace.
 
