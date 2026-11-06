@@ -1,6 +1,7 @@
 import React from 'react';
 import { folioOf, sealStatus } from '../data/detail';
 import { formatCOP } from '../data/mockProperties';
+import { track } from '../lib/analytics';
 import type { Property } from '../types/property';
 import { BookmarkIcon } from './BookmarkIcon';
 import { VerificationStamp } from './FolioSeal';
@@ -45,6 +46,10 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   onToggleSaved,
 }) => {
   const req = property.requirements;
+  const openDetail = () => {
+    track('ficha_abierta', { publicado_por_persona: Boolean(property.publisherType) });
+    onOpenDetail();
+  };
 
   return (
     <li className="bg-surface border border-rule rounded-[10px] overflow-hidden flex flex-col">
@@ -95,7 +100,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
 
       <div className="px-4 pt-3.5 pb-3 flex-1">
         <h3 className="text-[17px] font-bold tracking-[-0.01em] leading-snug">
-          <button type="button" onClick={onOpenDetail} className="text-left hover:underline">
+          <button type="button" onClick={openDetail} className="text-left hover:underline">
             {property.title}
           </button>
         </h3>
@@ -127,7 +132,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
       </div>
 
       <div className="grid grid-cols-2 gap-2 px-4 pb-4">
-        <button type="button" onClick={onOpenDetail} className="border border-ink rounded-lg py-2 text-sm font-semibold hover:bg-paper">
+        <button type="button" onClick={openDetail} className="border border-ink rounded-lg py-2 text-sm font-semibold hover:bg-paper">
           Ver ficha
         </button>
         <button type="button" onClick={onContact} className="bg-ink text-white rounded-lg py-2 text-sm font-semibold hover:bg-ink-hover">

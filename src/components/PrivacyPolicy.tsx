@@ -1,5 +1,6 @@
 import React from 'react';
 import { realVerification } from '../lib/accounts';
+import { analyticsEnabled } from '../lib/analytics';
 
 // Política de tratamiento de datos (Ley 1581 de 2012) en palabras simples. Se abre en #privacidad,
 // desde la casilla de autorización del registro y desde el pie de página.
@@ -52,11 +53,20 @@ const sections: { title: string; body: React.ReactNode }[] = [
         },
       ]
     : []),
+  ...(analyticsEnabled
+    ? [
+        {
+          title: 'Medición de uso',
+          body: 'Medimos cómo se usa Wallex con PostHog: qué páginas se abren y acciones como abrir una ficha, guardar, comparar, contactar o publicar, con un identificador al azar que queda en tu navegador. Si tienes cuenta, lo unimos a ella con un número interno, nunca con tu nombre, tu correo ni tu celular. No grabamos tu pantalla ni lo que escribes. Lo usamos para saber qué funciona y qué mejorar.',
+        },
+      ]
+    : []),
   {
     title: 'Dónde se guardan',
     body:
       'En Supabase, el servicio que usamos para las cuentas, los arriendos publicados y sus fotos, con servidores en Estados Unidos.' +
-      (realVerification ? ' Las fotos de la verificación de identidad las guarda Didit, una empresa de España.' : ''),
+      (realVerification ? ' Las fotos de la verificación de identidad las guarda Didit, una empresa de España.' : '') +
+      (analyticsEnabled ? ' Los datos de uso, en PostHog, también en Estados Unidos.' : ''),
   },
   {
     title: 'Tus derechos',

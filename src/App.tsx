@@ -17,6 +17,7 @@ import { realVerification, serverAccounts, userFromMetadata } from './lib/accoun
 import { addFavorite, fetchFavorites, removeFavorites } from './lib/favorites';
 import { SESSION_KEY } from './lib/localAccounts';
 import { fetchPublished } from './lib/listings';
+import { identifyUser, pageview, resetAnalytics, track, trackActivation } from './lib/analytics';
 import { supabase } from './lib/supabase';
 import { readIdentity, refreshIdentity, startIdentity, type IdentityState } from './lib/verification';
 import type { Role, SessionUser } from './types/account';
@@ -182,7 +183,12 @@ export default function App() {
     const pending = pendingSave.current;
     pendingSave.current = null;
     const first = pending
-      ? addFavorite(email, pending).catch(() => setNotice('No pudimos guardar el arriendo. Tócalo otra vez para intentarlo de nuevo.'))
+      ? addFavorite(email, pending)
+          .then(() => {
+            track('arriendo_guardado', { despues_de_crear_cuenta: true });
+            trackActivation('guardar');
+          })
+          .catch(() => setNotice('No pudimos guardar el arriendo. Tócalo otra vez para intentarlo de nuevo.'))
       : Promise.resolve();
     return first
       .then(() => fetchFavorites(email))
@@ -224,7 +230,10 @@ export default function App() {
           if (request !== identityRequest.current) return;
           setIdentity({ email, state });
           // Recién aprobada: sus arriendos ya pueden salir con el sello
-          if (askDidit && state === 'aprobada') refreshPublished();
+          if (askDidit && state === 'aprobada') {
+            refreshPublished();
+            track('verificacion_aprobada');
+          }
         })
         .catch(() => {
           if (request === identityRequest.current) setIdentity({ email, state: 'error' });
@@ -248,6 +257,12 @@ export default function App() {
       : null;
   const shownContact = contactingProperty ?? returnProperty;
 
+  // Llegada desde el buscador de la landing (/?desde=landing&zona=…&max=…): el paso de la landing a la app en el embudo
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('desde') === 'landing') track('llegada_desde_landing', { zona: params.get('zona'), max: Number(params.get('max')) || null });
+  }, []);
+
   // Quitar de la dirección lo que llega de la landing (?ingresar, ?comparar) y de Didit, para que al recargar no se repita
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -267,7 +282,7 @@ export default function App() {
       return;
     }
     const auth = supabase.auth;
-    type Session = { user: { email?: string; user_metadata?: Record<string, unknown> } } | null;
+    type Session = { user: { id: string; email?: string; user_metadata?: Record<string, unknown> } } | null;
     const toUser = (session: Session) =>
       session?.user.email ? userFromMetadata(session.user.email, session.user.user_metadata) : null;
     auth.getSession().then(({ data }) => {
@@ -277,7 +292,12 @@ export default function App() {
       else if (cameFromDidit.current)
         setNotice('Terminaste la verificación en Didit. Vuelve a la ventana donde la empezaste para ver el resultado.');
     });
-    const { data } = auth.onAuthStateChange((_event, session) => setUser(toUser(session)));
+    const { data } = auth.onAuthStateChange((event, session) => {
+      setUser(toUser(session));
+      // En la medición, la persona con sesión es su id de Supabase (sin nombre, correo ni celular)
+      if (session && (event === 'INITIAL_SESSION' || event === 'SIGNED_IN')) identifyUser(session.user.id, toUser(session)?.rol);
+      if (event === 'SIGNED_OUT') resetAnalytics();
+    });
     return () => data.subscription.unsubscribe();
   }, []);
 
@@ -302,6 +322,19 @@ export default function App() {
     window.scrollTo(0, 0);
   }, [view]);
 
+  // En la medición, cada vista cuenta como una visita. Abrir el comparador con dos o más opciones es activación.
+  const comparisonCount = useRef(comparisonIds.length);
+  useEffect(() => {
+    comparisonCount.current = comparisonIds.length;
+  }, [comparisonIds]);
+  useEffect(() => {
+    pageview();
+    if (view === 'comparar' && comparisonCount.current >= 2) {
+      track('comparador_usado', { opciones: comparisonCount.current });
+      trackActivation('comparar');
+    }
+  }, [view]);
+
   const openedInApp = useRef(false);
   // La vista a la que se vuelve después de la pantalla de cuenta
   const here = isAuthView(view) || view === 'privacidad' ? '#buscar' : `#${view}`;
@@ -320,6 +353,7 @@ export default function App() {
   // salvo que haya llegado a la pantalla de cuenta por guardar un arriendo.
   const handleAuthSuccess = (u: SessionUser) => {
     setUser(u);
+    track(view === 'crear-cuenta' ? 'registro_completado' : 'sesion_iniciada', { rol: u.rol ?? null });
     openedInApp.current = false;
     const newPublisher = view === 'crear-cuenta' && u.rol === 'publica' && returnTo.current === '#buscar' && !saveIntent;
     setSaveIntent(null);
@@ -353,6 +387,10 @@ export default function App() {
     const update = (change: (ids: string[]) => string[]) =>
       setSaved((prev) => (prev && prev.email === email ? { ...prev, ids: change(prev.ids) } : prev));
     update(wasSaved ? drop : add);
+    if (!wasSaved) {
+      track('arriendo_guardado');
+      trackActivation('guardar');
+    }
     (wasSaved ? removeFavorites(email, [property.id]) : addFavorite(email, property.id)).catch(() => {
       update(wasSaved ? add : drop);
       setNotice(
@@ -384,6 +422,7 @@ export default function App() {
   // Lleva a la página de Didit. Al terminar, Didit devuelve a la persona a la raíz de Wallex y, con lo
   // guardado aquí, vuelve a esta misma vista (y, si venía de un contacto, a ese contacto).
   const startVerification = async (contactar?: string) => {
+    track('verificacion_iniciada', { desde: contactar ? 'contacto' : here.slice(1) });
     const url = await startIdentity(new URL('/', window.location.origin).toString());
     saveReturnContext({ vista: here.slice(1), contactar, comparar: view === 'comparar' ? comparisonIds : undefined });
     window.location.assign(url);
@@ -422,6 +461,13 @@ export default function App() {
     refreshPublished();
     window.location.hash = '#buscar';
     setNotice('Borramos tu cuenta con todo lo que tenía: tus arriendos, sus fotos y tus guardados.');
+  };
+
+  // Contactar a quien publica: abre la verificación y cuenta como activación
+  const openContact = (prop: Property) => {
+    track('contacto_iniciado', { publicado_por_persona: Boolean(prop.publisherType) });
+    trackActivation('contactar');
+    setContactingProperty(prop);
   };
 
   // Gestión de comparación
@@ -548,7 +594,15 @@ export default function App() {
           />
         )}
         {view === 'publicar' && user && (
-          <PublishForm user={user} onPublished={refreshPublished} identityVerified={myIdentity === 'aprobada'} />
+          <PublishForm
+            user={user}
+            onPublished={() => {
+              track('arriendo_publicado');
+              trackActivation('publicar');
+              refreshPublished();
+            }}
+            identityVerified={myIdentity === 'aprobada'}
+          />
         )}
         {view === 'mis-publicaciones' && user && <MyListings onChanged={refreshPublished} identity={realIdentity()} />}
         {view === 'guardados' && user && (
@@ -564,7 +618,7 @@ export default function App() {
             onOpenComparer={() => {
               window.location.hash = '#comparar';
             }}
-            onContactProperty={(prop) => setContactingProperty(prop)}
+            onContactProperty={openContact}
             transportProfileId={transportProfileId}
             onTransportProfileChange={setTransportProfileId}
           />
@@ -579,7 +633,7 @@ export default function App() {
             onRemoveProperty={handleRemoveFromComparison}
             onAddProperty={handleAddToComparison}
             onReplaceProperty={handleReplaceComparison}
-            onContactProperty={(prop) => setContactingProperty(prop)}
+            onContactProperty={openContact}
             onClose={() => {
               window.location.hash = '#buscar';
             }}
@@ -595,7 +649,7 @@ export default function App() {
             onOpenComparer={() => {
               window.location.hash = '#comparar';
             }}
-            onContactProperty={(prop) => setContactingProperty(prop)}
+            onContactProperty={openContact}
             properties={allProperties}
             savedIds={savedIds}
             onToggleSaved={toggleSaved}
