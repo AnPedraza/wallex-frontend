@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { SESSION_KEY } from './components/AuthForm';
 import { AuthScreen } from './components/AuthScreen';
-import { ContactVerification } from './components/ContactVerification';
+import { ContactVerification, type RealIdentity } from './components/ContactVerification';
 import { Footer } from './components/Footer';
 import { MyListings } from './components/MyListings';
 import { Navbar } from './components/Navbar';
@@ -13,10 +13,11 @@ import { PropertyComparer } from './components/PropertyComparer';
 import { PublishForm } from './components/PublishForm';
 import { SavedProperties, type SavedStatus } from './components/SavedProperties';
 import { INITIAL_PROPERTIES } from './data/mockProperties';
-import { serverAccounts, userFromMetadata } from './lib/accounts';
+import { realVerification, serverAccounts, userFromMetadata } from './lib/accounts';
 import { addFavorite, fetchFavorites, removeFavorites } from './lib/favorites';
 import { fetchPublished } from './lib/listings';
 import { supabase } from './lib/supabase';
+import { readIdentity, refreshIdentity, startIdentity, type IdentityState } from './lib/verification';
 import type { Role, SessionUser } from './types/account';
 import type { Property } from './types/property';
 
@@ -34,10 +35,14 @@ const readSession = (): SessionUser | null => {
   return null;
 };
 
-// "Abrir el comparador" de la landing llega con ?comparar=5,3,1 y trae esas opciones; si no, el comparador empieza vacío
+// "Abrir el comparador" de la landing llega con ?comparar=5,3,1 y trae esas opciones; si no, el comparador empieza vacío.
+// Al volver de Didit también llega así, y puede traer lo publicado en Wallex (ids largos), que aparece cuando carga.
+const PUBLISHED_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const compareFromLanding = (): string[] => {
   const ids = new URLSearchParams(window.location.search).get('comparar')?.split(',') ?? [];
-  return ids.filter((id, i) => ids.indexOf(id) === i && INITIAL_PROPERTIES.some((p) => p.id === id)).slice(0, 3);
+  return ids
+    .filter((id, i) => ids.indexOf(id) === i && (INITIAL_PROPERTIES.some((p) => p.id === id) || PUBLISHED_ID.test(id)))
+    .slice(0, 3);
 };
 
 // Cada vista vive en el hash. #ingresar y #crear-cuenta son la pantalla de cuenta, sin el catálogo detrás.
@@ -85,11 +90,26 @@ const leaveAuthIfOpen = () => {
 // Lo guardado por la persona con sesión. El correo dice de quién es: así nunca se ve lo de otra cuenta.
 type Saved = { email: string; ids: string[]; status: 'listo' | 'error' };
 
+// En qué va la verificación de identidad de la persona con sesión (también va con su correo)
+type Identity = { email: string; state: IdentityState | 'error' };
+
+// Después de verificarse, Didit devuelve a la persona a /?verificacion=1&vista=…&contactar=…
+// (y le agrega a la dirección sus propios datos, que aquí no se usan)
+const fromVerification = () => {
+  const params = new URLSearchParams(window.location.search);
+  if (!params.has('verificacion')) return null;
+  const vista = `#${params.get('vista') ?? 'buscar'}`;
+  return { hash: VIEWS[vista] && !isAuthView(VIEWS[vista]) ? vista : '#buscar', contactar: params.get('contactar') };
+};
+
 export default function App() {
   const [user, setUser] = useState<SessionUser | null>(() => (supabase ? null : readSession()));
   // Enlaces viejos de la landing llegan con ?ingresar: se llevan a la pantalla de cuenta
   const fromLandingLogin = () => new URLSearchParams(window.location.search).has('ingresar');
-  const [currentHash, setCurrentHash] = useState(() => (fromLandingLogin() ? '#ingresar' : window.location.hash || '#buscar'));
+  const [returning] = useState(fromVerification);
+  const [currentHash, setCurrentHash] = useState(() =>
+    fromLandingLogin() ? '#ingresar' : (returning?.hash ?? (window.location.hash || '#buscar'))
+  );
   const [comparisonIds, setComparisonIds] = useState<string[]>(compareFromLanding);
   const [contactingProperty, setContactingProperty] = useState<Property | null>(null);
   // Perfil de transporte compartido: el total del mes es el mismo en catálogo, ficha y comparador
@@ -156,15 +176,55 @@ export default function App() {
     publishedStatus === 'listo' ? savedIds.filter((id) => !allProperties.some((p) => p.id === id)) : [];
   const savedStatus: SavedStatus = !mine || publishedStatus === 'cargando' ? 'cargando' : mine.status;
 
-  // Quitar ?ingresar y ?comparar de la dirección para que al recargar no se vuelvan a aplicar
+  // Verificación de identidad con Didit. Lo guardado en Wallex alcanza, salvo que la verificación siga
+  // abierta o la persona venga de vuelta de Didit: ahí se le pregunta a Didit cómo va.
+  const [identity, setIdentity] = useState<Identity | null>(null);
+  const identityRequest = useRef(0);
+  const loadIdentity = useCallback(
+    (email: string, askDidit: boolean) => {
+      const request = ++identityRequest.current;
+      const read = askDidit
+        ? refreshIdentity()
+        : readIdentity().then((state) => (state === 'en-curso' || state === 'en-revision' ? refreshIdentity() : state));
+      void read
+        .then((state) => {
+          if (request !== identityRequest.current) return;
+          setIdentity({ email, state });
+          // Recién aprobada: sus arriendos ya pueden salir con el sello
+          if (askDidit && state === 'aprobada') refreshPublished();
+        })
+        .catch(() => {
+          if (request === identityRequest.current) setIdentity({ email, state: 'error' });
+        });
+    },
+    [refreshPublished]
+  );
+  const cameFromDidit = useRef(Boolean(returning));
+  useEffect(() => {
+    if (!realVerification || !userEmail) return;
+    loadIdentity(userEmail, cameFromDidit.current);
+    cameFromDidit.current = false;
+  }, [userEmail, loadIdentity]);
+  const myIdentity = user && identity?.email === user.email ? identity.state : null;
+
+  // Al volver de Didit por un contacto, el modal se abre solo con el resultado
+  const [returnContact, setReturnContact] = useState<string | null>(() => returning?.contactar ?? null);
+  const returnProperty =
+    returnContact && myIdentity !== null && publishedStatus !== 'cargando'
+      ? (allProperties.find((p) => p.id === returnContact) ?? null)
+      : null;
+  const shownContact = contactingProperty ?? returnProperty;
+
+  // Quitar de la dirección lo que llega de la landing (?ingresar, ?comparar) y de Didit, para que al recargar no se repita
   useEffect(() => {
     const url = new URL(window.location.href);
-    if (!url.searchParams.has('ingresar') && !url.searchParams.has('comparar')) return;
+    const keys = ['ingresar', 'comparar', 'verificacion', 'vista', 'contactar', 'verificationSessionId', 'status'];
+    if (!keys.some((key) => url.searchParams.has(key))) return;
     if (url.searchParams.has('ingresar')) url.hash = '#ingresar';
-    url.searchParams.delete('ingresar');
-    url.searchParams.delete('comparar');
+    else if (returning) url.hash = returning.hash;
+    keys.forEach((key) => url.searchParams.delete(key));
     window.history.replaceState(null, '', url.pathname + url.search + url.hash);
-  }, []);
+  }, [returning]);
 
   // Con cuentas de verdad, Supabase guarda la sesión; aquí solo se lee al entrar y se escuchan sus cambios.
   // Con la cuenta local, la sesión ya se leyó del navegador.
@@ -180,6 +240,9 @@ export default function App() {
     auth.getSession().then(({ data }) => {
       setUser(toUser(data.session));
       if (data.session) leaveAuthIfOpen();
+      // Pasa cuando se termina la verificación en el celular después de empezarla en el computador
+      else if (cameFromDidit.current)
+        setNotice('Terminaste la verificación en Didit. Vuelve a la ventana donde la empezaste para ver el resultado.');
     });
     const { data } = auth.onAuthStateChange((_event, session) => setUser(toUser(session)));
     return () => data.subscription.unsubscribe();
@@ -284,6 +347,31 @@ export default function App() {
     setSaved(null);
     void loadSaved(user.email);
   };
+
+  // Lleva a la página de Didit. Al terminar, Didit devuelve a la persona a esta misma vista
+  // (y, si venía de un contacto, a ese contacto).
+  const startVerification = async (contactar?: string) => {
+    const volver = new URL(window.location.pathname, window.location.origin);
+    volver.searchParams.set('verificacion', '1');
+    volver.searchParams.set('vista', here.slice(1));
+    if (contactar) volver.searchParams.set('contactar', contactar);
+    if (view === 'comparar' && comparisonIds.length > 0) volver.searchParams.set('comparar', comparisonIds.join(','));
+    window.location.assign(await startIdentity(volver.toString()));
+  };
+
+  // Lo que necesitan el contacto y Mis publicaciones para la verificación de verdad (sin Didit, nada)
+  const realIdentity = (contactar?: string): RealIdentity | undefined =>
+    realVerification
+      ? {
+          state: myIdentity,
+          onStart: () => startVerification(contactar),
+          onRefresh: () => {
+            if (!user) return;
+            setIdentity(null);
+            loadIdentity(user.email, true);
+          },
+        }
+      : undefined;
 
   const handleLogout = () => {
     if (supabase) {
@@ -398,8 +486,10 @@ export default function App() {
             onLogin={() => goToAuth('#ingresar', here)}
           />
         )}
-        {view === 'publicar' && user && <PublishForm user={user} onPublished={refreshPublished} />}
-        {view === 'mis-publicaciones' && user && <MyListings onChanged={refreshPublished} />}
+        {view === 'publicar' && user && (
+          <PublishForm user={user} onPublished={refreshPublished} identityVerified={myIdentity === 'aprobada'} />
+        )}
+        {view === 'mis-publicaciones' && user && <MyListings onChanged={refreshPublished} identity={realIdentity()} />}
         {view === 'guardados' && user && (
           <SavedProperties
             properties={savedProperties}
@@ -455,16 +545,22 @@ export default function App() {
 
       {!authView && <Footer />}
 
-      {/* Verificación al contactar (simulada y declarada como tal) */}
-      {contactingProperty && (
+      {/* Verificación al contactar: con Didit si está encendida; si no, simulada y declarada como tal */}
+      {shownContact && (
         <ContactVerification
-          property={contactingProperty}
-          onClose={() => setContactingProperty(null)}
+          key={shownContact.id}
+          property={shownContact}
+          onClose={() => {
+            setContactingProperty(null);
+            setReturnContact(null);
+          }}
           signedIn={Boolean(user)}
           onSignIn={() => {
             setContactingProperty(null);
+            setReturnContact(null);
             goToAuth('#ingresar', here);
           }}
+          identity={realIdentity(shownContact.id)}
         />
       )}
 

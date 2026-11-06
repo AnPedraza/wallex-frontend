@@ -7,7 +7,8 @@ import type { Property as DetailProperty } from './properties';
 
 export const sealStatus = (p: Property): SealStatus => (!p.verified ? 'unverified' : p.certified ? 'verified' : 'pending');
 
-export const folioOf = (p: Property) => sampleFolio(p.id, p.title, p.zone);
+// El folio de ejemplo es solo para los inmuebles de ejemplo: lo publicado por personas reales no tiene uno
+export const folioOf = (p: Property): string | null => (p.publisherType ? null : sampleFolio(p.id, p.title, p.zone));
 
 // La ficha usa su propio formato (data/properties): galería, descripción y requisitos en filas
 export const toDetail = (property: Property): DetailProperty => ({

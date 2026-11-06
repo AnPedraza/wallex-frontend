@@ -1,6 +1,8 @@
 import type { PublisherType } from '../types/account';
 import type { Property } from '../types/property';
+import { realVerification } from './accounts';
 import { supabase } from './supabase';
+import { fetchVerifiedPublishers } from './verification';
 
 // Las 20 localidades de Bogotá, para la zona de cada publicación
 export const BOGOTA_ZONES = [
@@ -75,8 +77,9 @@ const PUBLISHER_LABEL: Record<PublisherType, string> = {
 export const monthTotalOf = (row: Pick<ListingRow, 'canon' | 'administracion'>) => row.canon + row.administracion + BASE_TRANSPORT;
 
 // Una publicación con la misma forma que los inmuebles de ejemplo, para que el catálogo y la ficha la traten igual.
-// Mientras la verificación de identidad sea simulada, nada de lo publicado sale como verificado.
-export const toProperty = (row: ListingRow): Property => ({
+// Sale con identidad verificada solo si quien publica se verificó de verdad con Didit; el certificado de
+// tradición nunca se coteja, así que su sello queda en "tradición pendiente".
+export const toProperty = (row: ListingRow, verified = false): Property => ({
   id: row.id,
   title: row.titulo,
   location: `${row.barrio}, Bogotá`,
@@ -90,9 +93,9 @@ export const toProperty = (row: ListingRow): Property => ({
   bedrooms: row.habitaciones,
   bathrooms: row.banos,
   stratum: row.estrato,
-  verified: false,
+  verified,
   certified: false,
-  ownerName: `${PUBLISHER_LABEL[row.tipo_anunciante]} (sin verificar)`,
+  ownerName: verified ? PUBLISHER_LABEL[row.tipo_anunciante] : `${PUBLISHER_LABEL[row.tipo_anunciante]} (sin verificar)`,
   image: row.fotos[0],
   images: row.fotos,
   description: row.descripcion || undefined,
@@ -116,7 +119,12 @@ export const fetchPublished = async (): Promise<Property[]> => {
     .order('creado', { ascending: false })
     .limit(200);
   if (error) throw error;
-  return ((data ?? []) as unknown as ListingRow[]).map(toProperty);
+  const rows = (data ?? []) as unknown as ListingRow[];
+  // Si no se puede saber quién está verificado, todo sale "Sin verificar": nunca un sello de más
+  const verified = realVerification
+    ? await fetchVerifiedPublishers([...new Set(rows.map((row) => row.user_id))]).catch(() => new Set<string>())
+    : new Set<string>();
+  return rows.map((row) => toProperty(row, verified.has(row.user_id)));
 };
 
 export const fetchMine = async (userId: string): Promise<ListingRow[]> => {

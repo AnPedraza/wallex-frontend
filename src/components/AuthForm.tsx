@@ -1,6 +1,6 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import type { AuthError } from '@supabase/supabase-js';
-import { serverAccounts, userFromMetadata } from '../lib/accounts';
+import { realVerification, serverAccounts, userFromMetadata } from '../lib/accounts';
 import { supabase } from '../lib/supabase';
 import { PUBLISHER_TYPES, type PublisherType, type Role, type SessionUser } from '../types/account';
 
@@ -488,7 +488,8 @@ export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'register', in
                   className={inputClass(Boolean(errors.celular))}
                 />
                 <p id={`${celularId}-hint`} className="mt-1.5 text-xs text-ink-soft">
-                  Lo verán las personas con cuenta que quieran contactarte por tus arriendos.
+                  Lo verán las personas {realVerification ? 'con la identidad verificada' : 'con cuenta'} que quieran contactarte por tus
+                  arriendos.
                 </p>
                 {errors.celular && (
                   <p id={`${celularId}-error`} className="mt-1 text-xs text-unverified">

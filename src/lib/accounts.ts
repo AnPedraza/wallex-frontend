@@ -7,6 +7,10 @@ export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL ?? '';
 export const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? '';
 export const serverAccounts = Boolean(SUPABASE_URL && SUPABASE_KEY);
 
+// Verificación de identidad de verdad, con Didit. Necesita las cuentas de Supabase y sus dos funciones
+// (verificacion y didit-webhook) ya desplegadas; mientras tanto la verificación se simula y la pantalla lo dice.
+export const realVerification = serverAccounts && import.meta.env.VITE_VERIFICACION === 'didit';
+
 const text = (value: unknown) => (typeof value === 'string' && value.trim() ? value.trim() : undefined);
 
 // Los datos del registro que Supabase guarda con la cuenta (user_metadata), ya revisados

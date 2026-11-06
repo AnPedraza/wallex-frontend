@@ -1,4 +1,5 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
+import { realVerification } from '../lib/accounts';
 import { BASE_TRANSPORT, BOGOTA_ZONES, publishListing, removePhotos, uploadPhotos, type ListingInput } from '../lib/listings';
 import { ACCEPTED_PHOTOS, MAX_PHOTOS, preparePhoto } from '../lib/photos';
 import { supabase } from '../lib/supabase';
@@ -7,6 +8,7 @@ import { PUBLISHER_TYPES, type PublisherType, type SessionUser } from '../types/
 interface PublishFormProps {
   user: SessionUser;
   onPublished?: (id: string) => void;
+  identityVerified?: boolean; // si quien publica ya verificó su identidad con Didit
 }
 
 interface Photo {
@@ -118,7 +120,15 @@ const emptyValues = (user: SessionUser): Values => ({
 });
 
 // Formulario para publicar un arriendo con la ficha estándar de Wallex
-export const PublishForm: React.FC<PublishFormProps> = ({ user, onPublished }) => {
+// Lo que se le dice a quien publica sobre el sello: depende de si ya verificó su identidad
+const sealText = (verified: boolean) =>
+  verified
+    ? 'Tu identidad está verificada: tu arriendo sale con ese sello.'
+    : realVerification
+      ? 'Sale como «Sin verificar» hasta que verifiques tu identidad desde Mis publicaciones.'
+      : 'Sale como «Sin verificar» hasta que verifiquemos tu identidad.';
+
+export const PublishForm: React.FC<PublishFormProps> = ({ user, onPublished, identityVerified = false }) => {
   const [v, setV] = useState<Values>(() => emptyValues(user));
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [consent, setConsent] = useState(false);
@@ -257,7 +267,7 @@ export const PublishForm: React.FC<PublishFormProps> = ({ user, onPublished }) =
       <section className="max-w-[640px] mx-auto px-4 sm:px-6 py-16 lg:py-24 text-center">
         <h1 className="text-[2rem] lg:text-[2.75rem] leading-[1.08] font-extrabold tracking-[-0.03em]">Tu arriendo ya está publicado</h1>
         <p className="mt-4 text-[15px] text-ink-soft leading-relaxed">
-          Ya aparece en el catálogo con la ficha completa. Sale como «Sin verificar» hasta que verifiquemos tu identidad.
+          Ya aparece en el catálogo con la ficha completa. {sealText(identityVerified)}
         </p>
         <div className="mt-8 flex flex-col sm:flex-row gap-2.5 justify-center">
           <a href="#buscar" className="bg-ink text-white font-semibold text-sm px-5 py-3 rounded-lg hover:bg-ink-hover">
@@ -568,11 +578,18 @@ export const PublishForm: React.FC<PublishFormProps> = ({ user, onPublished }) =
               'celular',
               'Celular de contacto',
               { type: 'tel', inputMode: 'numeric', autoComplete: 'tel-national', placeholder: '3001234567' },
-              'Lo verán las personas con cuenta que quieran escribirte por este arriendo.'
+              `Lo verán las personas ${realVerification ? 'con la identidad verificada' : 'con cuenta'} que quieran escribirte por este arriendo.`
             )}
           </div>
           <p className="text-sm text-ink-soft">
-            Tu arriendo sale como <strong className="text-unverified">Sin verificar</strong> hasta que verifiquemos tu identidad.
+            {identityVerified ? (
+              <span className="text-verified font-semibold">{sealText(true)}</span>
+            ) : (
+              <>
+                Tu arriendo sale como <strong className="text-unverified">Sin verificar</strong> hasta que{' '}
+                {realVerification ? 'verifiques tu identidad desde Mis publicaciones' : 'verifiquemos tu identidad'}.
+              </>
+            )}
           </p>
         </fieldset>
 
@@ -592,7 +609,8 @@ export const PublishForm: React.FC<PublishFormProps> = ({ user, onPublished }) =
               className="mt-0.5 size-4 accent-ink shrink-0 cursor-pointer"
             />
             <span>
-              Autorizo que Wallex publique este arriendo con sus fotos y muestre mi nombre y mi celular a las personas con cuenta, según la{' '}
+              Autorizo que Wallex publique este arriendo con sus fotos y muestre mi nombre y mi celular a las personas{' '}
+              {realVerification ? 'con la identidad verificada' : 'con cuenta'}, según la{' '}
               <a href="/#privacidad" target="_blank" rel="noopener" className="font-semibold text-ink underline underline-offset-2">
                 política de datos
               </a>{' '}

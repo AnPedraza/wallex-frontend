@@ -1,4 +1,5 @@
 import React from 'react';
+import { realVerification } from '../lib/accounts';
 
 // Política de tratamiento de datos (Ley 1581 de 2012) en palabras simples. Se abre en #privacidad,
 // desde la casilla de autorización del registro y desde el pie de página.
@@ -23,19 +24,39 @@ const sections: { title: string; body: React.ReactNode }[] = [
   },
   {
     title: 'Qué guardamos',
-    body: 'Tu nombre, tu correo, tu contraseña y si buscas arriendo o publicas. Si publicas, también cómo publicas (propietario, inmobiliaria o arrendatario que cede el contrato), tu celular, los datos de tus arriendos y sus fotos. Además, los arriendos que guardes para ver después. La contraseña se guarda protegida: nadie del equipo la puede ver. No pedimos cédula, selfie ni datos de pago; la verificación de identidad que ves al contactar es simulada y no guarda nada.',
+    body: 'Tu nombre, tu correo, tu contraseña y si buscas arriendo o publicas. Si publicas, también cómo publicas (propietario, inmobiliaria o arrendatario que cede el contrato), tu celular, los datos de tus arriendos y sus fotos. Además, los arriendos que guardes para ver después. La contraseña se guarda protegida: nadie del equipo la puede ver. No pedimos datos de pago. ' +
+      (realVerification
+        ? 'De la verificación de identidad guardamos solo el resultado (aprobada, en revisión o rechazada) y la fecha.'
+        : 'La verificación de identidad que ves al contactar es simulada: no pedimos cédula ni selfie y no guarda nada.'),
   },
   {
     title: 'Quién ve qué',
-    body: 'Tus arriendos publicados y sus fotos los puede ver cualquiera. Tu nombre y tu celular de contacto solo los ven las personas con cuenta en Wallex, para escribirte por uno de tus arriendos. Tus guardados y los demás datos de tu cuenta solo los ves tú.',
+    body:
+      'Tus arriendos publicados y sus fotos los puede ver cualquiera. Tu nombre y tu celular de contacto solo los ven las personas ' +
+      (realVerification ? 'con cuenta que ya verificaron su identidad' : 'con cuenta en Wallex') +
+      ', para escribirte por uno de tus arriendos. Tus guardados y los demás datos de tu cuenta solo los ves tú.' +
+      (realVerification ? ' Si publicas, cualquiera ve en el sello de tus arriendos si verificaste tu identidad.' : ''),
   },
   {
     title: 'Para qué los usamos',
-    body: 'Para manejar tu cuenta, mostrar tus arriendos y que te puedan contactar por ellos. No vendemos tus datos ni los compartimos con nadie.',
+    body:
+      'Para manejar tu cuenta, mostrar tus arriendos y que te puedan contactar por ellos' +
+      (realVerification ? ', y para verificar tu identidad cuando quieres ver un contacto o publicar' : '') +
+      '. No vendemos tus datos ni los compartimos con nadie más.',
   },
+  ...(realVerification
+    ? [
+        {
+          title: 'Verificación de identidad',
+          body: 'Te la pedimos para ver el contacto de quien publica y para que tus arriendos salgan con identidad verificada. La hace Didit Identity Spain, S.L. (Barcelona, España), como encargado de Wallex: en su página toma una foto de tu cédula por ambos lados y una selfie, y revisa que la cédula sea auténtica y que la selfie sea de la misma persona. Tu rostro es un dato sensible: no estás obligado a autorizar su tratamiento y, si no lo haces, puedes seguir usando Wallex, salvo ver el contacto de quien publica. A Wallex solo le llega el resultado. Didit guarda las fotos durante un mes y después las borra.',
+        },
+      ]
+    : []),
   {
     title: 'Dónde se guardan',
-    body: 'En Supabase, el servicio que usamos para las cuentas, los arriendos publicados y sus fotos, con servidores en Estados Unidos.',
+    body:
+      'En Supabase, el servicio que usamos para las cuentas, los arriendos publicados y sus fotos, con servidores en Estados Unidos.' +
+      (realVerification ? ' Las fotos de la verificación de identidad las guarda Didit, una empresa de España.' : ''),
   },
   {
     title: 'Tus derechos',

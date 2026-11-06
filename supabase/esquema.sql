@@ -137,3 +137,48 @@ create policy "fotos: subir a la carpeta propia" on storage.objects
 drop policy if exists "fotos: borrar las propias" on storage.objects;
 create policy "fotos: borrar las propias" on storage.objects
   for delete to authenticated using (bucket_id = 'fotos' and (storage.foldername(name))[1] = (select auth.uid()::text));
+
+-- 6. Verificación de identidad con Didit. Las fotos de la cédula y la selfie las toma y las guarda Didit;
+--    Wallex guarda solo el estado de cada verificación. Solo las funciones de Wallex (verificacion y
+--    didit-webhook, con la llave secreta) crean y cambian estas filas: desde el navegador solo se leen.
+create table if not exists public.verificaciones (
+  session_id uuid primary key,
+  user_id uuid not null references auth.users (id) on delete cascade,
+  estado text not null default 'Not Started',
+  creado timestamptz not null default now(),
+  actualizado timestamptz not null default now()
+);
+alter table public.verificaciones enable row level security;
+create index if not exists verificaciones_por_persona on public.verificaciones (user_id, creado desc);
+
+drop policy if exists "verificaciones: ver las propias" on public.verificaciones;
+create policy "verificaciones: ver las propias" on public.verificaciones
+  for select to authenticated using (user_id = (select auth.uid()));
+
+-- Quién tiene la identidad verificada. Se ve la propia y la de quien tiene arriendos publicados,
+-- porque eso es lo que dice el sello de sus arriendos. De quien solo busca, no lo ve nadie más.
+create table if not exists public.identidades (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  verificada timestamptz not null default now()
+);
+alter table public.identidades enable row level security;
+
+drop policy if exists "identidades: la propia y las de quien publica" on public.identidades;
+create policy "identidades: la propia y las de quien publica" on public.identidades
+  for select to anon, authenticated using (
+    user_id = (select auth.uid())
+    or exists (select 1 from public.inmuebles i where i.user_id = identidades.user_id and i.estado = 'publicado')
+  );
+
+-- Con la verificación de verdad, el contacto de quien publica solo lo ve quien ya verificó su identidad
+-- (y quien publica, el suyo). Reemplaza la regla de la sección 3, que pedía solo tener cuenta.
+drop policy if exists "contactos: ver con cuenta" on public.contactos;
+drop policy if exists "contactos: ver con identidad verificada" on public.contactos;
+create policy "contactos: ver con identidad verificada" on public.contactos
+  for select to authenticated using (
+    user_id = (select auth.uid())
+    or (
+      exists (select 1 from public.inmuebles i where i.id = inmueble_id and i.estado = 'publicado')
+      and exists (select 1 from public.identidades v where v.user_id = (select auth.uid()))
+    )
+  );

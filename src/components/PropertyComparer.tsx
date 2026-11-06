@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import type { Property, TransportProfile } from '../types/property';
 import { TRANSPORT_PROFILES, calculatePricePerM2, formatCOP } from '../data/mockProperties';
 import { VerificationStamp, type SealStatus } from './FolioSeal';
-import { sampleFolio } from '../data/folio';
+import { folioOf } from '../data/detail';
 import { TRANSPORT_LABELS } from '../data/transportLabels';
 
 interface PropertyComparerProps {
@@ -379,7 +379,7 @@ export const PropertyComparer: React.FC<PropertyComparerProps> = ({
                         <VerificationStamp
                           seed={property.id}
                           status={status}
-                          folio={property.verified ? sampleFolio(property.id, property.title, property.zone) : null}
+                          folio={property.verified ? folioOf(property) : null}
                         />
                       </div>
 
