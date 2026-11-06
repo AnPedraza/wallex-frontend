@@ -319,6 +319,7 @@ En lo publicado por personas reales, sin sesión el modal pide entrar a la cuent
 
 **Con Didit** (`VITE_VERIFICACION=didit`) la verificación es de verdad y se hace una sola vez:
 - Sin sesión, siempre pide entrar a la cuenta, también en los inmuebles de ejemplo.
+- En computador, debajo de lo que se pide, una línea con ícono de cámara avisa que hace falta una cámara que el navegador pueda usar y sugiere el celular: sin cámara, la página de Didit no avanza ni avisa. En pantallas táctiles no sale (`pointer-coarse:hidden`).
 - La autorización (`IdentityConsent`) dice que lo hace Didit en su propia página, que el rostro es un dato sensible y que autorizarlo es opcional, y que Wallex guarda solo el resultado. El botón lleva a Didit; mientras abre dice «Abriendo la verificación…» y, si falla, qué hacer.
 - Al volver de Didit el modal se abre solo con el resultado. Hay un estado para cada caso: revisando, en revisión (lo revisa el equipo en la consola de Didit), rechazada (con «Intentar de nuevo»), vencida o sin terminar.
 - Con la identidad aprobada se ve el contacto de una vez. En los inmuebles de ejemplo dice que no tienen un contacto real.

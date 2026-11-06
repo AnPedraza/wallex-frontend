@@ -66,6 +66,8 @@ Las tablas y los permisos de la base de datos están en `supabase/esquema.sql`. 
 
 Las llaves de Didit van solo en los secretos de Supabase: nunca en el código, en `.env.local` ni en Vercel.
 
+Si en el computador el botón «Continuar» de Didit no hace nada, el navegador no puede usar la cámara: dale permiso a `verify.didit.me` o haz la verificación desde el celular.
+
 Para probarlo desde un celular conectado a la misma red Wi-Fi, arráncalo con `npm run dev -- --host` y abre la dirección «Network» que imprime Vite. Con las variables de Supabase el registro funciona por esa dirección; sin ellas no, porque la cuenta simulada necesita https para calcular el hash de la contraseña.
 
 Otros comandos:

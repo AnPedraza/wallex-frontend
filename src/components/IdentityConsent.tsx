@@ -43,6 +43,16 @@ export const IdentityConsent: React.FC<IdentityConsentProps> = ({ onStart, start
   return (
     <>
       <WhatWeAsk />
+      {/* La página de Didit no avanza ni avisa si el navegador no puede usar la cámara. En celulares
+          y tabletas (pantalla táctil) no hace falta decirlo. */}
+      <p className="mt-2 flex gap-2.5 text-sm text-ink-soft pointer-coarse:hidden">
+        <svg className="size-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+          <path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" />
+          <circle cx="12" cy="13" r="3.5" />
+        </svg>
+        Necesitas una cámara que el navegador pueda usar. Si tu computador no tiene, entra a Wallex desde el celular y verifícate
+        allá.
+      </p>
       <p className="text-[12.5px] text-ink-soft mt-3 leading-relaxed">
         Lo hace Didit, nuestro proveedor de verificación, en su propia página; al terminar vuelves aquí. Tu rostro es un dato sensible: no
         estás obligado a autorizar su tratamiento, pero sin esa autorización no podemos verificarte. Wallex solo guarda el resultado, no las
