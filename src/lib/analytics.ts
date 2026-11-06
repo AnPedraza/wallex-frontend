@@ -94,10 +94,14 @@ export const trackActivation = (accion: 'guardar' | 'comparar' | 'contactar' | '
 export const identifyUser = (id: string, rol?: string) => run((ph) => ph.identify(id, { rol: rol ?? null }));
 export const resetAnalytics = () => run((ph) => ph.reset());
 
+// El día según el reloj de quien visita (en Bogotá, con la fecha UTC el día cambiaría a las 7 de la noche)
+const localDay = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 // Regreso: la primera visita de cada día en este navegador, si ya había venido otro día
 export const trackVisit = () => {
   try {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDay(new Date());
     const last = localStorage.getItem(VISIT_KEY);
     localStorage.setItem(VISIT_KEY, today);
     if (last && last !== today) {

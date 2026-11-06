@@ -351,11 +351,12 @@ export default function App() {
   // Al terminar, se reemplaza la pantalla de cuenta en el historial: "atrás" no vuelve al formulario.
   // Quien acaba de crear su cuenta para publicar llega directo al formulario de publicar,
   // salvo que haya llegado a la pantalla de cuenta por guardar un arriendo.
-  const handleAuthSuccess = (u: SessionUser) => {
+  // Registro o inicio de sesión lo dice el formulario, no la dirección: desde #ingresar también se crea la cuenta.
+  const handleAuthSuccess = (u: SessionUser, created: boolean) => {
     setUser(u);
-    track(view === 'crear-cuenta' ? 'registro_completado' : 'sesion_iniciada', { rol: u.rol ?? null });
+    track(created ? 'registro_completado' : 'sesion_iniciada', { rol: u.rol ?? null });
     openedInApp.current = false;
-    const newPublisher = view === 'crear-cuenta' && u.rol === 'publica' && returnTo.current === '#buscar' && !saveIntent;
+    const newPublisher = created && u.rol === 'publica' && returnTo.current === '#buscar' && !saveIntent;
     setSaveIntent(null);
     window.location.replace(newPublisher ? '#publicar' : returnTo.current);
   };

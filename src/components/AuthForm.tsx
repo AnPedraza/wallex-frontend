@@ -12,7 +12,8 @@ type Status = 'idle' | 'loading' | 'success';
 interface AuthFormProps {
   initialMode?: AuthMode;
   initialRole?: Role;
-  onSuccess?: (user: SessionUser) => void;
+  // created dice si la cuenta se acaba de crear o si solo se inició sesión (el formulario puede cambiar de modo)
+  onSuccess?: (user: SessionUser, created: boolean) => void;
 }
 
 interface FieldErrors {
@@ -116,7 +117,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'register', in
     setDoneUser(user);
     setStatus('success');
     // Pausa corta para que se alcance a leer el mensaje de éxito
-    successTimer.current = window.setTimeout(() => onSuccess?.(user), 900);
+    successTimer.current = window.setTimeout(() => onSuccess?.(user, isRegister), 900);
   };
 
   // Lo que se pide en el registro, revisado en el mismo orden en que aparece

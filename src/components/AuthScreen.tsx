@@ -6,7 +6,7 @@ import { AuthForm, type AuthMode } from './AuthForm';
 interface AuthScreenProps {
   mode: AuthMode;
   initialRole?: Role; // "Crear cuenta para publicar" llega con "Quiero publicar" marcado
-  onSuccess: (user: SessionUser) => void;
+  onSuccess: (user: SessionUser, created: boolean) => void;
   onBack: () => void;
   note?: React.ReactNode; // por qué se pide la cuenta, cuando se llega desde una acción (por ejemplo, guardar)
 }
