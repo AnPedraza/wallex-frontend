@@ -55,6 +55,12 @@ export default {
       const { error } = await db
         .from('verificaciones')
         .insert({ session_id: sesion.session_id, user_id: userId, estado: sesion.status ?? 'Not Started' });
+      // Si la persona ya tenía una sesión abierta, Didit devuelve esa misma (para seguir donde iba):
+      // ya está guardada, y basta con comprobar que sea de quien llama
+      if (error?.code === '23505') {
+        const { data: guardada } = await db.from('verificaciones').select('user_id').eq('session_id', sesion.session_id).maybeSingle();
+        if (guardada?.user_id === userId) return Response.json({ url: sesion.url });
+      }
       if (error) {
         console.error('No se guardó la sesión', error.message);
         return Response.json({ error: 'base-de-datos' }, { status: 500 });
