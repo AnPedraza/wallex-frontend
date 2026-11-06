@@ -19,6 +19,7 @@ Plataforma web para buscar, comparar y contactar vivienda en Bogotá, con la ide
 8. Contactar a quien publica, lo que abre la verificación de identidad (KYC) antes de compartir el contacto. Con Didit encendido (ver más abajo) la verificación es de verdad: foto de la cédula por ambos lados y una selfie, una sola vez. En los arriendos publicados por personas reales, al final se ven su nombre y su celular, con botón de WhatsApp.
 9. Publicar un arriendo con la ficha estándar (lo que se paga, lo que pides, cómo se llega y hasta 8 fotos) y verlo en el catálogo.
 10. En «Mis publicaciones», pausar, volver a publicar o borrar tus arriendos, y verificar tu identidad para que salgan con el sello de identidad verificada.
+11. En «Mi cuenta» (tocando tu nombre en la barra), cambiar tus datos y tu contraseña, ver tu verificación de identidad, descargar lo que Wallex tiene de ti y borrar tu cuenta con todo lo que tiene.
 
 ## Qué está simulado
 
@@ -53,6 +54,8 @@ VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 Sin ese archivo todo funciona igual, pero las cuentas quedan simuladas en tu navegador y no aparece «Publicar». Git ignora `.env.local`. En Vercel las mismas dos variables van en Settings → Environment Variables.
 
 Las tablas y los permisos de la base de datos están en `supabase/esquema.sql`. En un proyecto nuevo de Supabase se corre una vez en SQL Editor; se puede volver a correr sin perder datos.
+
+Para borrar la cuenta desde «Mi cuenta» hace falta la Edge Function `borrar-cuenta` (en `supabase/functions/`). Se despliega como las demás: el archivo se llama `index.ts` y va con la verificación de JWT apagada, porque la función revisa la sesión por su cuenta.
 
 **Verificación de identidad con Didit (opcional).** Sin estos pasos la verificación se simula.
 
@@ -92,11 +95,13 @@ Otros comandos:
 ```
 src/
   App.tsx                    navegación por hash (#buscar, #comparar, #guardados, #publicar, #mis-publicaciones, #privacidad), sesión y modales
-  lib/                       Supabase: accounts.ts (si hay variables), supabase.ts (el cliente), listings.ts (publicaciones), photos.ts (fotos), favorites.ts (guardados) y verification.ts (Didit)
+  lib/                       accounts.ts (si hay variables), supabase.ts (el cliente), account.ts (mi cuenta), listings.ts (publicaciones), photos.ts (fotos), favorites.ts (guardados), verification.ts (Didit), localAccounts.ts (cuenta simulada) y validation.ts (mensajes de los formularios)
   landing/                   página de inicio en /inicio
   components/
     AuthForm.tsx             registro e inicio de sesión (con AuthScreen, su pantalla)
     PublishForm.tsx          publicar un arriendo con fotos
+    AccountPage.tsx          mi cuenta: datos, contraseña, verificación y Ley 1581
+    IdentityPanel.tsx        en qué va la verificación (Mi cuenta y Mis publicaciones)
     MyListings.tsx           mis publicaciones
     PrivacyPolicy.tsx        política de tratamiento de datos (Ley 1581)
     Navbar.tsx, Footer.tsx   barra de navegación y pie de página
@@ -115,7 +120,7 @@ src/
   types/                     tipos de TypeScript
 supabase/
   esquema.sql                tablas y permisos de la base de datos
-  functions/                 verificacion (crea y consulta la sesión en Didit) y didit-webhook (recibe el resultado)
+  functions/                 verificacion (crea y consulta la sesión en Didit), didit-webhook (recibe el resultado) y borrar-cuenta
 ```
 
 ## Tecnologías

@@ -260,6 +260,7 @@ Formas de documento: rectángulos con esquinas apenas redondeadas. 10 px en tarj
 - Barra blanca de 68 px, fija arriba, con un filete abajo. El logo va de 40 px con "Wallex" en 800. Las pestañas van a 15 px: la activa en tinta y 600 con subrayado verde de 2 px, las demás en tinta suave. El contador de elementos en el comparador es una píldora en tinta. Por debajo de 1024 px pasa a menú de hamburguesa.
 - **Guardados** va a la derecha, junto a la cuenta, y no cuenta entre los tres enlaces: el marcador con su contador en píldora de tinta y, desde 1280 px, el texto «Guardados». Activo, lleva el mismo subrayado verde. En celular el marcador queda a la vista entre el nombre y el menú.
 - Si no cabe todo, se recorta el nombre de la persona con puntos suspensivos; los enlaces nunca se parten ni se desbordan.
+- **El nombre de la persona** es el enlace a «Mi cuenta» (`#cuenta`), en escritorio y en celular. Activo, va en tinta y 600, como las pestañas.
 
 ### Pantalla de cuenta
 - "Ingresar" de la landing (`/#ingresar`) e "Ingresar / Crear cuenta" de la barra (`/#crear-cuenta`) abren una pantalla propia: el logo, "Volver" y el formulario centrado sobre papel, sin la barra, el pie ni el catálogo detrás.
@@ -309,6 +310,15 @@ El orden de la columna del folio es fijo: lugar, título (28 px, 800), metadatos
 - **Honestidad:** lo publicado sale «Sin verificar» hasta que quien publica se verifica con Didit; ahí pasa a «Tradición pendiente de cotejo», porque el certificado no se revisa. Nunca lleva folio: el folio de ejemplo es solo para los inmuebles de ejemplo. El formulario dice cuál de los dos sellos va a tener.
 - **Mis publicaciones** (`#mis-publicaciones`) lista cada arriendo con foto, estado, fecha y total del mes, y deja pausar, volver a publicar o borrar (con confirmación, porque también borra las fotos). Con Didit encendido, arriba va la identidad de quien publica: verificada (con su sello), en revisión, o un panel para verificarse que se abre con «Verificar mi identidad».
 - **La barra** nunca pasa de tres enlaces: quien publica ve «Mis publicaciones» y los demás, «Publicar arriendo».
+
+### Mi cuenta
+- **Vista `#cuenta`,** de 720 px de ancho, como la política de datos. Sin sesión pide entrar.
+- **Cuatro secciones,** cada una con su título afuera y una tarjeta blanca adentro:
+  - **Tus datos:** correo (solo se ve), nombre, si busca o publica y, si publica, cómo y su celular. Los errores dicen cómo corregir y llevan el foco al primer campo con problema.
+  - **Verificación de identidad:** el mismo panel de «Mis publicaciones» (`IdentityPanel`), con el texto según busque o publique. Sin Didit dice que es simulada.
+  - **Contraseña:** pide la actual antes de la nueva.
+  - **Tus datos personales:** «Descargar mis datos» (un JSON con lo que Wallex tiene de la persona) y «Borrar mi cuenta», que pide escribir BORRAR y dice todo lo que se borra.
+- Al final va «Salir de tu cuenta». Después de borrar, vuelve al catálogo con un aviso de lo que se borró.
 
 ### Verificación al contactar
 Modal de dos pasos (`ContactVerification`), con fondo en tinta al 55 %:
