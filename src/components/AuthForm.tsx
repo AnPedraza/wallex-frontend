@@ -1,8 +1,10 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import type { AuthError } from '@supabase/supabase-js';
 import { realVerification, serverAccounts, userFromMetadata } from '../lib/accounts';
+import { SESSION_KEY, hashPassword, newSalt, readUsers, writeUsers } from '../lib/localAccounts';
 import { supabase } from '../lib/supabase';
-import { PUBLISHER_TYPES, type PublisherType, type Role, type SessionUser } from '../types/account';
+import { PUBLISHER_TYPES, ROLE_OPTIONS, type PublisherType, type Role, type SessionUser } from '../types/account';
+import { MIN_PASSWORD, digitsOf, validateCelular, validateEmail, validateName, validateNewPassword } from '../lib/validation';
 
 export type AuthMode = 'login' | 'register';
 type Status = 'idle' | 'loading' | 'success';
@@ -22,78 +24,9 @@ interface FieldErrors {
   password?: string;
 }
 
-interface StoredUser {
-  salt: string;
-  hash: string;
-  nombre?: string;
-  rol?: Role;
-  tipoAnunciante?: PublisherType;
-  celular?: string;
-}
-
-// Con las variables de Supabase, la cuenta es de verdad: Supabase guarda el correo y la contraseña protegida,
-// y los datos del registro van con la cuenta. Sin ellas, la cuenta es simulada y vive en el localStorage
-// de este navegador: el correo, los datos del registro y un hash SHA-256 con sal, nunca la contraseña.
-const USERS_KEY = 'wallex.users';
-export const SESSION_KEY = 'wallex.session';
-const MIN_PASSWORD = 8;
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const CELULAR_PATTERN = /^3\d{9}$/;
-
-const ROLES: { id: Role; title: string; body: string }[] = [
-  { id: 'busca', title: 'Busco arriendo', body: 'Filtra, compara y guarda tus favoritos.' },
-  { id: 'publica', title: 'Quiero publicar', body: 'Publica tu arriendo con la ficha completa.' },
-];
-
-const toHex = (bytes: Uint8Array) =>
-  Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
-
-const hashPassword = async (password: string, salt: string) => {
-  const data = new TextEncoder().encode(`${salt}:${password}`);
-  const digest = await crypto.subtle.digest('SHA-256', data);
-  return toHex(new Uint8Array(digest));
-};
-
-const readUsers = (): Record<string, StoredUser> => {
-  try {
-    const raw = localStorage.getItem(USERS_KEY);
-    return raw ? (JSON.parse(raw) as Record<string, StoredUser>) : {};
-  } catch {
-    return {};
-  }
-};
-
-const digitsOf = (value: string) => value.replace(/\D/g, '');
-
-const validateEmail = (email: string) => {
-  if (!email) return 'Escribe tu correo, por ejemplo nombre@correo.com.';
-  if (!EMAIL_PATTERN.test(email))
-    return 'Revisa el correo: debe tener la forma nombre@correo.com, sin espacios.';
-  return undefined;
-};
-
 const validatePassword = (password: string, mode: AuthMode) => {
   if (!password) return 'Escribe tu contraseña.';
-  if (mode === 'register' && password.length < MIN_PASSWORD) {
-    const missing = MIN_PASSWORD - password.length;
-    return `La contraseña debe tener mínimo ${MIN_PASSWORD} caracteres. Te ${
-      missing === 1 ? 'falta 1' : `faltan ${missing}`
-    }.`;
-  }
-  return undefined;
-};
-
-const validateName = (nombre: string) => {
-  if (!nombre.trim()) return 'Escribe tu nombre, como quieres que te vean.';
-  if (nombre.trim().length < 2) return 'Tu nombre debe tener al menos 2 letras.';
-  return undefined;
-};
-
-const validateCelular = (celular: string) => {
-  const digits = digitsOf(celular);
-  if (!digits) return 'Escribe tu celular, para que te puedan contactar por tus arriendos.';
-  if (!CELULAR_PATTERN.test(digits)) return 'Revisa el celular: son 10 dígitos y empieza por 3, por ejemplo 3001234567.';
-  return undefined;
+  return mode === 'register' ? validateNewPassword(password) : undefined;
 };
 
 // Los errores de Supabase, dichos con lo que hay que hacer
@@ -291,7 +224,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'register', in
           setStatus('idle');
           return;
         }
-        const salt = toHex(crypto.getRandomValues(new Uint8Array(16)));
+        const salt = newSalt();
         users[normalizedEmail] = {
           salt,
           hash: await hashPassword(password, salt),
@@ -300,7 +233,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'register', in
           tipoAnunciante: profile.tipoAnunciante,
           celular: profile.celular,
         };
-        localStorage.setItem(USERS_KEY, JSON.stringify(users));
+        writeUsers(users);
       } else {
         if (!existing) {
           setFormError('No encontramos una cuenta con ese correo. Revisa que esté bien escrito o crea una cuenta.');
@@ -377,7 +310,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ initialMode = 'register', in
           <fieldset>
             <legend className={labelClass}>¿Qué quieres hacer en Wallex?</legend>
             <div className="grid grid-cols-2 gap-2.5">
-              {ROLES.map((r, i) => (
+              {ROLE_OPTIONS.map((r, i) => (
                 <label
                   key={r.id}
                   className={`flex flex-col gap-0.5 rounded-lg border p-3 cursor-pointer transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ink ${

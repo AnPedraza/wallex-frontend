@@ -15,6 +15,8 @@ interface NavbarProps {
   links?: NavLink[];
   // Guardados: va junto a la cuenta, con el marcador y cuántos hay (si no llega, no se muestra)
   saved?: { href: string; count: number };
+  // Mi cuenta: con sesión, el nombre lleva ahí (si no llega, el nombre es solo texto)
+  accountHref?: string;
 }
 
 // Secciones de la app
@@ -31,6 +33,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onLoginClick,
   links = defaultLinks,
   saved,
+  accountHref,
 }) => {
   const [hash, setHash] = useState(() => window.location.hash);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -49,9 +52,29 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, [menuOpen]);
 
   // Sin hash (o en el inicio) la sección activa es la primera
-  const hrefs = [...links.map((l) => l.href), ...(saved ? [saved.href] : [])];
+  const hrefs = [...links.map((l) => l.href), ...(saved ? [saved.href] : []), ...(accountHref ? [accountHref] : [])];
   const activeHref = hrefs.find((href) => href === hash) ?? (hash ? undefined : links[0]?.href);
   const savedActive = saved !== undefined && saved.href === activeHref;
+  const accountActive = accountHref !== undefined && accountHref === activeHref;
+
+  // El nombre de la persona: enlace a Mi cuenta, o texto si no hay esa vista
+  const accountName = (className: string) =>
+    user &&
+    (accountHref ? (
+      <a
+        href={accountHref}
+        onClick={() => setMenuOpen(false)}
+        aria-current={accountActive ? 'page' : undefined}
+        title={`Mi cuenta (${user.email})`}
+        className={`${className} truncate rounded ${focusRing} ${accountActive ? 'text-ink font-semibold' : 'text-ink-soft hover:text-ink hover:underline'}`}
+      >
+        {user.nombre || user.email}
+      </a>
+    ) : (
+      <span className={`${className} truncate text-ink-soft`} title={user.email}>
+        {user.nombre || user.email}
+      </span>
+    ));
 
   // Pestaña activa: subrayado verde de verificación, como el sello del folio
   const linkClass = (href: string) =>
@@ -116,9 +139,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {savedLink}
             {user ? (
               <div className="min-w-0 flex items-center gap-3">
-                <span className="text-sm text-ink-soft max-w-[16rem] truncate" title={user.email}>
-                  {user.nombre || user.email}
-                </span>
+                {accountName('text-sm max-w-[16rem]')}
                 <button
                   type="button"
                   onClick={handleLogout}
@@ -141,11 +162,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Celular: con sesión, el nombre queda a la vista; los guardados y el menú, al lado */}
         <div className="lg:hidden ml-auto min-w-0 flex items-center gap-1">
-          {user && (
-            <span className="min-w-0 max-w-[10rem] truncate text-[13px] text-ink-soft mr-1" title={user.email}>
-              {user.nombre || user.email}
-            </span>
-          )}
+          {accountName('min-w-0 max-w-[10rem] text-[13px] mr-1')}
           {saved && (
             <a
               href={saved.href}
@@ -195,9 +212,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="border-t border-rule pt-4">
             {user ? (
               <div className="flex items-center justify-between gap-3">
-                <span className="text-sm text-ink-soft truncate" title={user.email}>
-                  {user.nombre || user.email}
-                </span>
+                {accountName('text-sm')}
                 <button
                   type="button"
                   onClick={handleLogout}

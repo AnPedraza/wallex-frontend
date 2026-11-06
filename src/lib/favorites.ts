@@ -40,6 +40,16 @@ export const addFavorite = async (email: string, id: string) => {
   if (error && error.code !== '23505') throw error;
 };
 
+// Al borrar una cuenta local, se van también sus guardados. Con Supabase se borran solos con la cuenta.
+export const forgetLocalFavorites = (email: string) => {
+  const all = readLocal();
+  delete all[email];
+  localStorage.setItem(LOCAL_KEY, JSON.stringify(all));
+};
+
+// Los guardados de la cuenta local, para descargar sus datos
+export const localFavoriteIds = (email: string) => localIds(email);
+
 export const removeFavorites = async (email: string, ids: string[]) => {
   if (!supabase) {
     writeLocal(email, localIds(email).filter((x) => !ids.includes(x)));

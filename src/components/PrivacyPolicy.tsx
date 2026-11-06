@@ -60,7 +60,7 @@ const sections: { title: string; body: React.ReactNode }[] = [
   },
   {
     title: 'Tus derechos',
-    body: 'Puedes conocer, actualizar y corregir tus datos, pedir que los borremos y retirar esta autorización cuando quieras. Escríbenos desde el correo de tu cuenta: respondemos las consultas en máximo 10 días hábiles y los reclamos en máximo 15, como dice la ley.',
+    body: 'Puedes conocer, actualizar y corregir tus datos, pedir que los borremos y retirar esta autorización cuando quieras. En «Mi cuenta» (tocando tu nombre arriba) corriges tus datos, los descargas o borras tu cuenta con todo lo que tiene. Para lo demás, escríbenos desde el correo de tu cuenta: respondemos las consultas en máximo 10 días hábiles y los reclamos en máximo 15, como dice la ley.',
   },
   {
     title: 'Vigencia',

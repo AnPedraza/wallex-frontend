@@ -1,92 +1,13 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { deleteListing, fetchMine, monthTotalOf, setListingState, type ListingRow } from '../lib/listings';
 import { supabase } from '../lib/supabase';
 import type { RealIdentity } from './ContactVerification';
-import { FolioSeal } from './FolioSeal';
-import { IdentityConsent } from './IdentityConsent';
+import { IdentityPanel } from './IdentityPanel';
 
 interface MyListingsProps {
   onChanged?: () => void; // para que el catálogo se actualice cuando algo se pausa o se borra
   identity?: RealIdentity; // con la verificación de verdad, aquí se verifica quien publica
 }
-
-// La identidad de quien publica: es lo que hace que sus arriendos salgan con el sello de verificado
-const PublisherIdentity: React.FC<{ identity: RealIdentity }> = ({ identity }) => {
-  const [open, setOpen] = useState(false);
-  const consentRef = useRef<HTMLDivElement>(null);
-  const { state } = identity;
-
-  // El botón que abre la autorización desaparece: el foco pasa a la casilla
-  useEffect(() => {
-    if (open) consentRef.current?.querySelector('input')?.focus();
-  }, [open]);
-  const box = 'mt-6 bg-surface border border-rule rounded-[10px] p-5 sm:p-6';
-
-  if (state === 'aprobada') {
-    return (
-      <div className={`${box} flex items-center gap-4`}>
-        <FolioSeal seed="identidad-propia" status="pending" size={48} />
-        <p className="text-sm">
-          <span className="font-semibold text-verified">Tu identidad está verificada.</span>{' '}
-          <span className="text-ink-soft">
-            Tus arriendos lo muestran en su sello. El certificado de tradición y libertad sigue pendiente de cotejo.
-          </span>
-        </p>
-      </div>
-    );
-  }
-  if (state === null) return <p className="mt-6 text-sm text-ink-soft">Revisando tu verificación…</p>;
-  if (state === 'error' || state === 'en-revision') {
-    return (
-      <div className={box}>
-        <p className="text-sm">
-          {state === 'error' ? (
-            <span className="text-unverified">No pudimos revisar tu verificación. Revisa tu conexión e inténtalo de nuevo.</span>
-          ) : (
-            <>
-              <span className="font-semibold">Tu verificación está en revisión.</span>{' '}
-              <span className="text-ink-soft">Cuando quede aprobada, tus arriendos lo muestran en su sello.</span>
-            </>
-          )}
-        </p>
-        <button type="button" onClick={identity.onRefresh} className="mt-3 px-4 py-2 rounded-lg border border-control text-sm font-semibold hover:bg-paper">
-          {state === 'error' ? 'Intentar de nuevo' : 'Revisar de nuevo'}
-        </button>
-      </div>
-    );
-  }
-
-  const declined = state === 'rechazada';
-  return (
-    <div className={box}>
-      <div className="flex items-start gap-4">
-        <FolioSeal seed="identidad-propia" status="unverified" size={48} />
-        <div className="min-w-0">
-          <h2 className="text-base font-bold">{declined ? 'No pudimos verificar tu identidad' : 'Verifica tu identidad'}</h2>
-          <p className="mt-1 text-sm text-ink-soft">
-            {declined
-              ? 'Pasa cuando la foto de la cédula sale borrosa o con reflejos, o cuando la selfie no se ve bien. Puedes intentarlo otra vez.'
-              : 'Tus arriendos salen «Sin verificar» hasta que lo hagas. Así quien busca sabe que eres una persona real. Se hace una sola vez.'}
-          </p>
-          {!open && (
-            <button
-              type="button"
-              onClick={() => setOpen(true)}
-              className="mt-4 bg-ink text-white font-semibold text-sm px-5 py-2.5 rounded-lg hover:bg-ink-hover"
-            >
-              {declined ? 'Intentar de nuevo' : 'Verificar mi identidad'}
-            </button>
-          )}
-        </div>
-      </div>
-      {open && (
-        <div ref={consentRef} className="mt-5 pt-5 border-t border-rule max-w-lg">
-          <IdentityConsent onStart={identity.onStart} startLabel={declined ? 'Intentar de nuevo' : 'Verificar mi identidad'} />
-        </div>
-      )}
-    </div>
-  );
-};
 
 const cop = (n: number) => `$ ${n.toLocaleString('es-CO')}`;
 const dateText = (iso: string) => new Date(iso).toLocaleDateString('es-CO', { day: 'numeric', month: 'long' });
@@ -146,7 +67,7 @@ export const MyListings: React.FC<MyListingsProps> = ({ onChanged, identity }) =
         </a>
       </div>
 
-      {identity && <PublisherIdentity identity={identity} />}
+      {identity && <IdentityPanel identity={identity} publisher className="mt-6" />}
 
       {actionError && (
         <p role="alert" className="mt-6 text-sm bg-unverified/10 text-unverified border border-unverified/30 rounded-lg p-3">

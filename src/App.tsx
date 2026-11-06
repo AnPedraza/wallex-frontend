@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
-import { SESSION_KEY } from './components/AuthForm';
 import { AuthScreen } from './components/AuthScreen';
 import { ContactVerification, type RealIdentity } from './components/ContactVerification';
 import { Footer } from './components/Footer';
 import { MyListings } from './components/MyListings';
+import { AccountPage } from './components/AccountPage';
 import { Navbar } from './components/Navbar';
 import type { NavLink } from './components/Navbar';
 import { Notice } from './components/Notice';
@@ -15,6 +15,7 @@ import { SavedProperties, type SavedStatus } from './components/SavedProperties'
 import { INITIAL_PROPERTIES } from './data/mockProperties';
 import { realVerification, serverAccounts, userFromMetadata } from './lib/accounts';
 import { addFavorite, fetchFavorites, removeFavorites } from './lib/favorites';
+import { SESSION_KEY } from './lib/localAccounts';
 import { fetchPublished } from './lib/listings';
 import { supabase } from './lib/supabase';
 import { readIdentity, refreshIdentity, startIdentity, type IdentityState } from './lib/verification';
@@ -44,7 +45,16 @@ const compareFromLanding = (): string[] =>
   validCompareIds(new URLSearchParams(window.location.search).get('comparar')?.split(',') ?? []);
 
 // Cada vista vive en el hash. #ingresar y #crear-cuenta son la pantalla de cuenta, sin el catálogo detrás.
-type View = 'buscar' | 'comparar' | 'privacidad' | 'ingresar' | 'crear-cuenta' | 'publicar' | 'mis-publicaciones' | 'guardados';
+type View =
+  | 'buscar'
+  | 'comparar'
+  | 'privacidad'
+  | 'ingresar'
+  | 'crear-cuenta'
+  | 'publicar'
+  | 'mis-publicaciones'
+  | 'guardados'
+  | 'cuenta';
 const VIEWS: Record<string, View> = {
   '#comparar': 'comparar',
   '#privacidad': 'privacidad',
@@ -53,6 +63,7 @@ const VIEWS: Record<string, View> = {
   '#publicar': 'publicar',
   '#mis-publicaciones': 'mis-publicaciones',
   '#guardados': 'guardados',
+  '#cuenta': 'cuenta',
 };
 const viewOf = (hash: string): View => VIEWS[hash] ?? 'buscar';
 const isAuthView = (v: View) => v === 'ingresar' || v === 'crear-cuenta';
@@ -405,6 +416,14 @@ export default function App() {
     setUser(null);
   };
 
+  // Después de borrar la cuenta: la sesión ya se cerró; se vuelve al catálogo y se dice qué se borró
+  const handleAccountDeleted = () => {
+    setUser(null);
+    refreshPublished();
+    window.location.hash = '#buscar';
+    setNotice('Borramos tu cuenta con todo lo que tenía: tus arriendos, sus fotos y tus guardados.');
+  };
+
   // Gestión de comparación
   const handleToggleComparison = (propertyId: string) => {
     setComparisonIds((prev) => {
@@ -468,6 +487,7 @@ export default function App() {
           onLoginClick={openAuth}
           links={navLinks}
           saved={{ href: '#guardados', count: savedProperties.length }}
+          accountHref="#cuenta"
         />
       )}
 
@@ -503,6 +523,28 @@ export default function App() {
             createLabel="Crear cuenta"
             onCreate={() => goToAuth('#crear-cuenta', here)}
             onLogin={() => goToAuth('#ingresar', here)}
+          />
+        )}
+        {view === 'cuenta' && !user && (
+          <NeedsAccount
+            title="Entra para ver tu cuenta"
+            text="Ahí cambias tus datos y tu contraseña, ves tu verificación de identidad y descargas o borras tus datos."
+            createLabel="Crear cuenta"
+            onCreate={() => goToAuth('#crear-cuenta', here)}
+            onLogin={() => goToAuth('#ingresar', here)}
+          />
+        )}
+        {view === 'cuenta' && user && (
+          <AccountPage
+            key={user.email}
+            user={user}
+            identity={realIdentity()}
+            onUserChange={setUser}
+            onDeleted={handleAccountDeleted}
+            onLogout={() => {
+              handleLogout();
+              window.location.hash = '#buscar';
+            }}
           />
         )}
         {view === 'publicar' && user && (
