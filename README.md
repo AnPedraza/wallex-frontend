@@ -59,6 +59,7 @@ Las tablas y los permisos de la base de datos están en `supabase/esquema.sql`. 
 1. En [business.didit.me](https://business.didit.me) crea la cuenta. Para probar usa una aplicación de *sandbox*, que no gasta crédito; para personas reales, la de producción.
 2. Crea un flujo (workflow) con documento, prueba de vida pasiva y comparación de rostro, y pon la retención de las fotos en un mes, que es lo que dice la política de datos.
 3. Agrega un webhook con la dirección `https://<proyecto>.supabase.co/functions/v1/didit-webhook` y el evento `status.updated`.
+   En «Redirect URLs» registra la raíz de cada dirección donde corre la app, con `/` al final (por ejemplo, `http://localhost:5173/`): Didit solo devuelve a la persona a direcciones registradas tal cual.
 4. En Supabase, en Edge Functions, crea las funciones `verificacion` y `didit-webhook` con el código de `supabase/functions/`. A `didit-webhook` apágale la verificación de JWT, porque Didit no manda sesión: la función comprueba la firma del aviso.
 5. En los secretos de las Edge Functions guarda `DIDIT_API_KEY`, `DIDIT_WORKFLOW_ID` y `DIDIT_WEBHOOK_SECRET`. Para probar en *sandbox* un resultado fijo, también `DIDIT_SANDBOX_SCENARIO` (por ejemplo, `approve`).
 6. Vuelve a correr `supabase/esquema.sql` y agrega `VITE_VERIFICACION=didit` al `.env.local` (y en Vercel). Desde ahí el celular de quien publica solo lo ve quien verificó su identidad, así que la variable tiene que estar en todos los lugares donde corra la app.

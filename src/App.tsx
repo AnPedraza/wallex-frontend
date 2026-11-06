@@ -38,12 +38,10 @@ const readSession = (): SessionUser | null => {
 // "Abrir el comparador" de la landing llega con ?comparar=5,3,1 y trae esas opciones; si no, el comparador empieza vacío.
 // Al volver de Didit también llega así, y puede traer lo publicado en Wallex (ids largos), que aparece cuando carga.
 const PUBLISHED_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-const compareFromLanding = (): string[] => {
-  const ids = new URLSearchParams(window.location.search).get('comparar')?.split(',') ?? [];
-  return ids
-    .filter((id, i) => ids.indexOf(id) === i && (INITIAL_PROPERTIES.some((p) => p.id === id) || PUBLISHED_ID.test(id)))
-    .slice(0, 3);
-};
+const validCompareIds = (ids: string[]) =>
+  ids.filter((id, i) => ids.indexOf(id) === i && (INITIAL_PROPERTIES.some((p) => p.id === id) || PUBLISHED_ID.test(id))).slice(0, 3);
+const compareFromLanding = (): string[] =>
+  validCompareIds(new URLSearchParams(window.location.search).get('comparar')?.split(',') ?? []);
 
 // Cada vista vive en el hash. #ingresar y #crear-cuenta son la pantalla de cuenta, sin el catálogo detrás.
 type View = 'buscar' | 'comparar' | 'privacidad' | 'ingresar' | 'crear-cuenta' | 'publicar' | 'mis-publicaciones' | 'guardados';
@@ -93,13 +91,37 @@ type Saved = { email: string; ids: string[]; status: 'listo' | 'error' };
 // En qué va la verificación de identidad de la persona con sesión (también va con su correo)
 type Identity = { email: string; state: IdentityState | 'error' };
 
-// Después de verificarse, Didit devuelve a la persona a /?verificacion=1&vista=…&contactar=…
-// (y le agrega a la dirección sus propios datos, que aquí no se usan)
+// Después de verificarse, Didit devuelve a la persona a la raíz de Wallex (una dirección fija, porque Didit
+// solo acepta las que tiene registradas tal cual) y le agrega ?verificationSessionId=…&status=…
+// A qué vista volver, qué contacto abrir y qué había en el comparador se guarda en el navegador antes de salir.
+const RETURN_KEY = 'wallex.vuelta-didit';
+type ReturnContext = { vista: string; contactar?: string; comparar?: string[] };
+
+const saveReturnContext = (context: ReturnContext) => {
+  try {
+    sessionStorage.setItem(RETURN_KEY, JSON.stringify(context));
+  } catch {
+    // Sin almacenamiento se vuelve al catálogo
+  }
+};
+
 const fromVerification = () => {
-  const params = new URLSearchParams(window.location.search);
-  if (!params.has('verificacion')) return null;
-  const vista = `#${params.get('vista') ?? 'buscar'}`;
-  return { hash: VIEWS[vista] && !isAuthView(VIEWS[vista]) ? vista : '#buscar', contactar: params.get('contactar') };
+  if (!new URLSearchParams(window.location.search).has('verificationSessionId')) return null;
+  let context: Partial<ReturnContext> = {};
+  try {
+    const raw = sessionStorage.getItem(RETURN_KEY);
+    sessionStorage.removeItem(RETURN_KEY);
+    const parsed: unknown = raw ? JSON.parse(raw) : null;
+    if (parsed && typeof parsed === 'object') context = parsed as Partial<ReturnContext>;
+  } catch {
+    // Sin lo guardado (por ejemplo, se terminó en otro dispositivo) se vuelve al catálogo
+  }
+  const vista = `#${typeof context.vista === 'string' ? context.vista : 'buscar'}`;
+  return {
+    hash: VIEWS[vista] && !isAuthView(VIEWS[vista]) ? vista : '#buscar',
+    contactar: typeof context.contactar === 'string' ? context.contactar : null,
+    comparar: Array.isArray(context.comparar) ? validCompareIds(context.comparar.filter((id): id is string => typeof id === 'string')) : null,
+  };
 };
 
 export default function App() {
@@ -110,7 +132,7 @@ export default function App() {
   const [currentHash, setCurrentHash] = useState(() =>
     fromLandingLogin() ? '#ingresar' : (returning?.hash ?? (window.location.hash || '#buscar'))
   );
-  const [comparisonIds, setComparisonIds] = useState<string[]>(compareFromLanding);
+  const [comparisonIds, setComparisonIds] = useState<string[]>(() => returning?.comparar ?? compareFromLanding());
   const [contactingProperty, setContactingProperty] = useState<Property | null>(null);
   // Perfil de transporte compartido: el total del mes es el mismo en catálogo, ficha y comparador
   const [transportProfileId, setTransportProfileId] = useState('standard');
@@ -218,7 +240,7 @@ export default function App() {
   // Quitar de la dirección lo que llega de la landing (?ingresar, ?comparar) y de Didit, para que al recargar no se repita
   useEffect(() => {
     const url = new URL(window.location.href);
-    const keys = ['ingresar', 'comparar', 'verificacion', 'vista', 'contactar', 'verificationSessionId', 'status'];
+    const keys = ['ingresar', 'comparar', 'verificationSessionId', 'status'];
     if (!keys.some((key) => url.searchParams.has(key))) return;
     if (url.searchParams.has('ingresar')) url.hash = '#ingresar';
     else if (returning) url.hash = returning.hash;
@@ -348,15 +370,12 @@ export default function App() {
     void loadSaved(user.email);
   };
 
-  // Lleva a la página de Didit. Al terminar, Didit devuelve a la persona a esta misma vista
-  // (y, si venía de un contacto, a ese contacto).
+  // Lleva a la página de Didit. Al terminar, Didit devuelve a la persona a la raíz de Wallex y, con lo
+  // guardado aquí, vuelve a esta misma vista (y, si venía de un contacto, a ese contacto).
   const startVerification = async (contactar?: string) => {
-    const volver = new URL(window.location.pathname, window.location.origin);
-    volver.searchParams.set('verificacion', '1');
-    volver.searchParams.set('vista', here.slice(1));
-    if (contactar) volver.searchParams.set('contactar', contactar);
-    if (view === 'comparar' && comparisonIds.length > 0) volver.searchParams.set('comparar', comparisonIds.join(','));
-    window.location.assign(await startIdentity(volver.toString()));
+    const url = await startIdentity(new URL('/', window.location.origin).toString());
+    saveReturnContext({ vista: here.slice(1), contactar, comparar: view === 'comparar' ? comparisonIds : undefined });
+    window.location.assign(url);
   };
 
   // Lo que necesitan el contacto y Mis publicaciones para la verificación de verdad (sin Didit, nada)
