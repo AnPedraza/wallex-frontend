@@ -51,7 +51,9 @@ VITE_SUPABASE_URL=https://<proyecto>.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 ```
 
-Sin ese archivo todo funciona igual, pero las cuentas quedan simuladas en tu navegador y no aparece «Publicar». Git ignora `.env.local`. En Vercel las mismas dos variables van en Settings → Environment Variables.
+Sin ese archivo todo funciona igual, pero las cuentas quedan simuladas en tu navegador y no aparece «Publicar». Git ignora `.env.local`.
+
+El sitio publicado toma sus variables de `.env.production`, que sí está en el repositorio y que Vercel lee al construir. Ahí solo van valores públicos: la dirección de Supabase, su clave *publishable*, la bandera de Didit y la clave de PostHog, que de todos modos quedan en el código que descarga cualquier navegador. Las llaves secretas (Didit y la secreta de Supabase) van solo en los secretos de Supabase, nunca en ese archivo.
 
 Las tablas y los permisos de la base de datos están en `supabase/esquema.sql`. En un proyecto nuevo de Supabase se corre una vez en SQL Editor; se puede volver a correr sin perder datos.
 
@@ -90,12 +92,27 @@ Otros comandos:
 5. Toca el marcador que está al lado de «Comparar» (o «Guardar» en la ficha) y abre «Guardados» en la barra.
 6. Pulsa «Contactar» en la tarjeta (o «Contactar a quien publica» en la ficha o el comparador), marca la autorización y completa la verificación.
 
+**Medición de uso (PostHog).** Con `VITE_POSTHOG_KEY` (la clave pública del proyecto, empieza por `phc_`), la app y la landing mandan estos eventos; sin ella no se mide nada:
+
+| Evento | Cuándo |
+|---|---|
+| `$pageview` | Cada visita a la landing y a cada vista de la app |
+| `llegada_desde_landing` | Alguien usa el buscador de la landing y llega a la app |
+| `registro_completado` / `sesion_iniciada` | Crea la cuenta o entra (con su rol) |
+| `ficha_abierta` | Abre la ficha de un inmueble |
+| `arriendo_guardado`, `comparador_usado`, `contacto_iniciado`, `arriendo_publicado` | Guarda, compara 2 o más, toca «Contactar» o publica |
+| `activacion` | Junto con cualquiera de las cuatro anteriores, con la acción en `accion` |
+| `verificacion_iniciada` / `verificacion_aprobada` | Va a Didit / vuelve con la identidad aprobada |
+| `visita_regreso` | Vuelve otro día (con los días desde la visita anterior) |
+
+El embudo del reporte es `$pageview` en `/inicio/` → `registro_completado` → `activacion`, y el regreso sale de `visita_regreso` y del informe de retención de PostHog. Cada evento lleva `entorno` (`local`, `vista-previa` o `produccion`), así que los números del reporte se filtran por `produccion` y no cuentan las pruebas. PostHog solo mide lo que manda la app: sin clics automáticos, mapas de calor, grabación de pantalla ni encuestas. No se mandan nombres, correos ni celulares: a quien tiene cuenta se le identifica con su id de Supabase. En producción PostHog va por `/ingest`, que `vercel.json` reenvía a PostHog para que los bloqueadores de anuncios no corten la medición.
+
 ## Estructura
 
 ```
 src/
   App.tsx                    navegación por hash (#buscar, #comparar, #guardados, #publicar, #mis-publicaciones, #privacidad), sesión y modales
-  lib/                       accounts.ts (si hay variables), supabase.ts (el cliente), account.ts (mi cuenta), listings.ts (publicaciones), photos.ts (fotos), favorites.ts (guardados), verification.ts (Didit), localAccounts.ts (cuenta simulada) y validation.ts (mensajes de los formularios)
+  lib/                       accounts.ts (si hay variables), supabase.ts (el cliente), account.ts (mi cuenta), listings.ts (publicaciones), photos.ts (fotos), favorites.ts (guardados), verification.ts (Didit), analytics.ts (PostHog), localAccounts.ts (cuenta simulada) y validation.ts (mensajes de los formularios)
   landing/                   página de inicio en /inicio
   components/
     AuthForm.tsx             registro e inicio de sesión (con AuthScreen, su pantalla)
