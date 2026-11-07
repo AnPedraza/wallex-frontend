@@ -46,6 +46,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
   onToggleSaved,
 }) => {
   const req = property.requirements;
+  const photoCount = property.images?.length ?? 1;
   const openDetail = () => {
     track('ficha_abierta', { publicado_por_persona: Boolean(property.publisherType) });
     onOpenDetail();
@@ -55,6 +56,22 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
     <li className="bg-surface border border-rule rounded-[10px] overflow-hidden flex flex-col">
       <div className="relative aspect-[16/10] bg-rule">
         <img src={property.image} alt="" className="absolute inset-0 size-full object-cover" loading="lazy" />
+        {/* Si hay galería, se dice cuántas fotos tiene y se abre la ficha para verlas */}
+        {photoCount > 1 && (
+          <button
+            type="button"
+            onClick={openDetail}
+            aria-label={`Ver las ${photoCount} fotos: ${property.title}`}
+            className="absolute bottom-2.5 left-2.5 flex items-center gap-1.5 rounded-lg bg-surface text-ink hover:bg-paper px-2.5 py-1.5 text-[13px] font-semibold transition-colors"
+          >
+            <svg viewBox="0 0 16 16" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+              <rect x="1.75" y="3.25" width="12.5" height="9.5" rx="1.5" />
+              <path d="M1.75 10.75l3.5-3.25 3 2.75 2-1.75 4 3.5" strokeLinejoin="round" />
+              <circle cx="10.75" cy="6.25" r="1" />
+            </svg>
+            {photoCount} fotos
+          </button>
+        )}
         <div className="absolute top-2.5 right-2.5 flex gap-2">
           {onToggleSaved && (
             <button

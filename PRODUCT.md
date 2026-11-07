@@ -68,7 +68,7 @@ Restricciones:
 ## Evidence on Hand
 
 - Tres entrevistas cualitativas (Product One-Pager) y el documento de validación de supuestos con las hipótesis H1 a H3. Las cifras de ese documento (página de humo y 12 entrevistas) son **datos simulados** del ejercicio académico.
-- Los inmuebles, precios y fotos son de ejemplo. Las fotos son de Unsplash.
+- Los inmuebles, precios y fotos son de ejemplo. Las fotos son de Pexels y Unsplash: de 4 a 6 por inmueble, todas del mismo apartamento.
 - **Todavía no hay resultados de la validación con usuarios reales** (12 al 25 de octubre). No hay testimonios, métricas de uso, clientes ni prensa. No se deben inventar.
 
 ## Product Principles

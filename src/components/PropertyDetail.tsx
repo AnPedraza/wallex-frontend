@@ -20,6 +20,9 @@ const cop = (value: number) => `$ ${value.toLocaleString('es-CO')}`;
 
 const SWIPE_MIN_PX = 50;
 
+// Las miniaturas piden la foto más pequeña cuando la dirección trae el ancho (bancos de fotos)
+const thumbOf = (src: string) => src.replace(/([?&]w=)\d+/, '$1240');
+
 const Chevron: React.FC<{ dir: 'left' | 'right' }> = ({ dir }) => (
   <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
     <path d={dir === 'left' ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7'} />
@@ -147,7 +150,7 @@ export const PropertyDetail: React.FC<PropertyDetailProps> = ({
                     index === current ? 'border-ink' : 'border-transparent opacity-70 hover:opacity-100'
                   }`}
                 >
-                  <img src={src} alt="" className="size-full object-cover" />
+                  <img src={thumbOf(src)} alt="" className="size-full object-cover" />
                 </button>
               ))}
             </div>

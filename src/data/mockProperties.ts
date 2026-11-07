@@ -21,6 +21,12 @@ export const TRANSPORT_PROFILES: TransportProfile[] = [
   },
 ];
 
+// Fotos de ejemplo de bancos gratuitos (Pexels y Unsplash): varias del mismo apartamento.
+// La ficha las pide a 1200 px; la tarjeta, el comparador y la landing usan la primera a 800 px.
+const pexels = (id: number, w = 1200) =>
+  `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&w=${w}`;
+const unsplash = (id: string, w = 1200) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=80`;
+
 export const INITIAL_PROPERTIES: Property[] = [
   {
     id: '1',
@@ -39,7 +45,8 @@ export const INITIAL_PROPERTIES: Property[] = [
     verified: true,
     certified: true,
     ownerName: 'Carlos Mendoza (Verificado)',
-    image: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80',
+    image: pexels(19836804, 800),
+    images: [19836804, 19836831, 19836834, 19836836, 19836823].map((id) => pexels(id)),
     requirements: {
       guarantorRequired: false,
       minIncomeMultiplier: 2.0,
@@ -67,7 +74,8 @@ export const INITIAL_PROPERTIES: Property[] = [
     verified: true,
     certified: false,
     ownerName: 'Mariana Duarte (Verificada)',
-    image: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=800&q=80',
+    image: pexels(29904150, 800),
+    images: [29904150, 29904156, 29904164, 29904143, 29904159, 29904166].map((id) => pexels(id)),
     requirements: {
       guarantorRequired: true,
       minIncomeMultiplier: 2.5,
@@ -95,7 +103,8 @@ export const INITIAL_PROPERTIES: Property[] = [
     verified: true,
     certified: true,
     ownerName: 'Jorge Ramírez (Verificado)',
-    image: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=800&q=80',
+    image: pexels(6890390, 800),
+    images: [6890390, 6890399, 6890396, 6890405, 6890413, 6890401].map((id) => pexels(id)),
     requirements: {
       guarantorRequired: false,
       minIncomeMultiplier: 2.2,
@@ -123,7 +132,8 @@ export const INITIAL_PROPERTIES: Property[] = [
     verified: false,
     certified: false,
     ownerName: 'Anuncio particular (sin verificar)',
-    image: 'https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=800&q=80',
+    image: pexels(19836843, 800),
+    images: [19836843, 19836849, 19836844, 19836850].map((id) => pexels(id)),
     requirements: {
       guarantorRequired: true,
       minIncomeMultiplier: 3.0,
@@ -151,7 +161,15 @@ export const INITIAL_PROPERTIES: Property[] = [
     verified: true,
     certified: true,
     ownerName: 'Andrea Beltrán (Verificada)',
-    image: 'https://images.unsplash.com/photo-1536376072261-38c75010e6c9?auto=format&fit=crop&w=800&q=80',
+    image: unsplash('photo-1702014862053-946a122b920d', 800),
+    images: [
+      'photo-1702014862053-946a122b920d',
+      'photo-1702014859878-5d4743176d28',
+      'photo-1702014861736-d62834317c5e',
+      'photo-1702014861373-527115231f8c',
+      'photo-1702014859908-d48b9b844240',
+      'photo-1702014860610-06a4c3f83381',
+    ].map((id) => unsplash(id)),
     requirements: {
       guarantorRequired: false,
       minIncomeMultiplier: 1.8,
@@ -179,7 +197,8 @@ export const INITIAL_PROPERTIES: Property[] = [
     verified: true,
     certified: true,
     ownerName: 'Felipe Gómez (Verificado)',
-    image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80',
+    image: pexels(19836794, 800),
+    images: [19836794, 19836805, 19836796, 19836792, 19836803, 19836800].map((id) => pexels(id)),
     requirements: {
       guarantorRequired: false,
       minIncomeMultiplier: 2.3,

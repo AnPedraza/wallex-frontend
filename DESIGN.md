@@ -234,7 +234,7 @@ Sistema plano. Ninguna superficie lleva sombra: la profundidad viene del contras
 
 ## Shapes
 
-Formas de documento: rectángulos con esquinas apenas redondeadas. 10 px en tarjetas y paneles, 8 px en botones, campos y el botón "Comparar", 3 px en casillas, 2 px en rieles y barras de datos (control deslizante, histograma y desglose del comparador), y redondo solo en el contador de la barra y en el interruptor. Las fotos llenan el ancho de la tarjeta en proporción 16:10, recortadas por la esquina de la tarjeta.
+Formas de documento: rectángulos con esquinas apenas redondeadas. 10 px en tarjetas y paneles, 8 px en botones, campos y el botón "Comparar", 3 px en casillas, 2 px en rieles y barras de datos (control deslizante, histograma y desglose del comparador), y redondo solo en el contador de la barra y en el interruptor. Las fotos llenan el ancho de la tarjeta en proporción 16:10, recortadas por la esquina de la tarjeta. Si el inmueble tiene más de una foto, abajo a la izquierda va «N fotos» (mismo estilo que «Comparar»), que abre la ficha con la galería; las miniaturas de la galería piden la foto a 240 px.
 
 ## Components
 
