@@ -162,7 +162,7 @@ const Header: React.FC = () => {
   );
 };
 
-const HEADLINE = 'Arrendar en Bogotá sin adivinar cuánto pagas ni de quién fiarte.';
+const HEADLINE = 'Arrienda en Bogotá sabiendo cuánto vas a pagar y a quién.';
 const enter = (ms: number) => ({ ['--delay' as string]: `${ms}ms` }) as React.CSSProperties;
 
 // Una palabra del titular: todas suben igual, una tras otra; el h1 lleva el texto completo en aria-label
